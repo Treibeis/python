@@ -1,0 +1,75 @@
+import numpy as np
+import math
+from scipy.integrate import odeint
+from matplotlib.pyplot import *
+
+h_0, mp = 3.2408/10**18, 1/(5.39116/10**44)
+
+mp0 = 2.17651/10**8
+
+h, omega_m0, alpha = 0.72, 0.23, 0.5
+
+a0 = 1.0/10**4
+
+def k(a = alpha):
+	return ((a+6.0)/(a+2.0))*(a*(a+2.0)/2.0)**(a/2.0)
+
+kappa = k()*0.9230515*h*h_0/10**17/mp**2
+
+def H(a, y1, y2):
+	return ((h*h_0)**2*(omega_m0/a**3)+(y2**2+kappa*mp**2*y1**(-alpha))/12.0)**0.5
+
+def dy1(l, a):
+	return l[1]/a/H(a, l[0], l[1])
+
+def dy2(l, a):
+	return kappa*alpha*mp**2*l[0]*(-alpha-1)/2.0/H(a, l[0], l[1])/a-3*l[1]/a
+
+def y1_ini(a = a0):
+	return (alpha*(alpha+2.0)/2.0)**0.5*a**(4.0/(alpha+2.0))
+
+def dphi_ini(a = a0):
+	return (alpha*2.0/(alpha+2.0))**0.5*a**((2.0-alpha)/(2.0+alpha))
+
+def H_ini(a = a0):
+	return (((h*h_0)**2*(omega_m0/a**3)+kappa*mp**2*y1_ini(a)**(-alpha)/12.0)/(1-(a*dphi_ini(a))**2/12.0))**0.5
+
+def y2_ini(a = a0):
+	return dphi_ini(a)*a*H_ini(a)
+
+def f(x, a):
+	return [dy1(x, a), dy2(x, a)]
+
+def rho(y1, y2):
+	return mp**2*(y2**2+kappa*mp**2*y1**(-alpha))/32/math.pi
+
+def p(y1, y2):
+	return mp**2*(y2**2-kappa*mp**2*y1**(-alpha))/32/math.pi
+
+def inte(a1 = a0, a2 = 1.0, N = 100001):
+	la = np.linspace(a1, a2, N)
+	l = odeint(f, [y1_ini(a1), y2_ini(a1)], la)
+	l = np.array(l)
+	l = l.T
+	ly1, ly2 = l[0], l[1]	
+	lp, lrho, lH, lt, lw, ldM = [], [], [], [], [], []
+	s = 0.0
+	sd = 0.0
+	lt.append(0.0)
+	for i in range(len(l[0])):
+		lp.append(p(ly1[i],ly2[i]))
+		lrho.append(rho(ly1[i],ly2[i]))
+		lw.append(lp[i]/lrho[i])
+		lH.append(H(la[i],ly1[i],ly2[i]))
+	laa = []
+	laa.append(la[0])
+	for i in range(len(l[0]-1)/2):
+		s += (1.0/H(la[2*i],ly1[2*i],ly2[2*i])/la[2*i]+4.0/H(la[2*i+1],ly1[2*i+1],ly2[2*i+1])/la[2*i+1]+1.0/H(la[2*i+2],ly1[2*i+2],ly2[2*i+2])/la[2*i+2])*(la[1]-la[0])/3.0
+		sd += (1.0/H(la[2*i],ly1[2*i],ly2[2*i])/la[2*i]**2+4.0/H(la[2*i+1],ly1[2*i+1],ly2[2*i+1])/la[2*i+1]**2+1.0/H(la[2*i+2],ly1[2*i+2],ly2[2*i+2])/la[2*i+2]**2)*(la[1]-la[0])/3.0
+		lt.append(s/3600/24/365)
+		ldM.append(sd*3*10**8/h/h_0/10**6/3.08568/10**16)
+		laa.append(la[2*i+2])
+	d = {}
+	d['p'], d['rho'], d['phi'], d['dphi'], d['H'], d['a'], d['aa'], d['t'], d['w'], d['dM'] = lp, lrho, ly1, ly2, lH, la, laa, lt, lw, ldM
+	return d
+	

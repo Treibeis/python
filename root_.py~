@@ -1,0 +1,152 @@
+import numpy as ny
+
+def root(a, b, c, p = 53, L = -1023, U = 1023, beta = 2.0):
+	"""Optimized root-finding function for quadratic equations."""
+	Max, Min = (beta-1.0/beta**(p-1))*beta**U, beta**L
+	n = 0
+	r = []
+	s = 'hehe'
+	if a==0:
+		if b==0:
+			if c==0:
+				print("Trivial.\n")
+				return {}
+			print("Input error.\n")
+			return {}
+		else:
+			r.append(-c/b)
+			n = 1
+			return {'n':n, 'r':r, 's':'normal_1'}
+	elif a<0:
+		a, b, c = -a, -b, -c
+	if b>0:	
+		if c>0:
+			k = b-2.0*a**0.5*c**0.5
+			if k<0:
+				print("NO root.\n")
+				return {'n':0, 'r':[], 's':'no root'}
+			elif k==0:
+				if b**0.5/a**0.5/2.0**0.5>Max**0.5:
+					print("All roots overflow.\n")
+					return {'n':0, 'r':[], 's':'all overflow'}
+				elif b**0.5/a**0.5/2.0**0.5<Min**0.5:
+					print("All roots underflow.\n")
+					return {'n':0, 'r':[], 's':'all underflow'}
+				else:
+					r.append(b/a/2.0)
+					r.append(b/a/2.0)
+					return {'n':2, 'r':r, 's':'normal_2'}
+			else:
+				if a**0.5*c**0.5>(Max-b)/2.0:
+					j = (b/6.0+1.0*a**0.5*c**0.5/3.0)
+				else:
+					j = (b+2.0*a**0.5*c**0.5)/6.0
+				d = k**0.5*j**0.5*6.0**0.5
+				if a>1:
+					if b/a/2.0<=Max-d/a/2.0:
+						r.append(-b/a/2.0-d/a/2.0)
+						n = n+1
+				else:
+					if b/2.0<=a*Max-d/2.0:
+						r.append(-b/a/2.0-d/a/2.0)
+						n = n+1
+				if c>1:
+					if b/c/2.0<=1.0/Min-d/c/2.0:
+						r.append(-1.0/(b/c/2.0+d/c/2.0))	
+						n = n+0.1
+				else: 
+					if b/2.0<=c/Min-d/2.0:
+						r.append(-1.0/(b/c/2.0+d/c/2.0))	
+						n = n+0.1
+		elif c<0:
+			if (b**0.5/a**0.5/2.0**0.5)>abs(c)**0.25/a**0.25:
+				if abs(c)**0.1/a**0.1<a**0.2*Min**0.1/Max**0.1/b**0.2/4.0**0.1:
+					if b**0.5/a**0.5>Max**0.5:
+						print("All roots overflow.\n")
+						return {'n':0, 'r':[], 's':'all overflow'}
+					elif b**0.5/a**0.5<Min**0.5:
+						print("All roots underflow.\n")
+						return {'n':0, 'r':[], 's':'all underflow'}
+					else:
+						r.append(-b/a)
+						return {'n':1, 'r':r, 's':'one root underflow'}
+				else: 
+					if (b**0.5/a**0.5/2.0**0.5)<=Max**0.5/(1.0+(1.0+4.0*(abs(c)**0.25*a**0.25/b**0.25/b**0.25)**4)**0.5)**0.5 and (b**0.5/a**0.5/2.0**0.5)>=Min**0.5/(1.0+(1.0+4.0*(abs(c)**0.25*a**0.25/b**0.25/b**0.25)**4)**0.5)**0.5:
+						r.append(-((b**0.5/a**0.5/2.0**0.5)*(1.0+(1.0+4.0*(abs(c)**0.25*a**0.25/b**0.25/b**0.25)**4)**0.5)**0.5)**2)
+						n = n+1
+					elif n==0:
+						return {'n':0, 'r':[], 's':'all underflow'}
+					if abs(a)**0.1/abs(c)**0.1<abs(c)**0.2*Min**0.1/Max**0.1/b**0.2/4.0**0.1:
+						if b**0.5/abs(c)**0.5>1.0/Min**0.5:
+							print("All roots underflow.\n")
+							return {'n':0, 'r':[], 's':'all underflow'}
+						elif b**0.5/abs(c)**0.5<1.0/Max**0.5:
+							print("All roots overflow.\n")
+							return {'n':0, 'r':[], 's':'all overflow'}
+						else:
+							r.append(-c/b)
+							return {'n':1, 'r':r, 's':'one root overflow'}
+					else:
+						if (b**0.5/abs(c)**0.5/2.0**0.5)<=(1.0/Min**0.5)/(1.0+(1.0-4.0*(abs(c)**0.25*a**0.25/b**0.25/b**0.25)**4)**0.5)**0.5 and (b**0.5/abs(c)**0.5/2.0**0.5)>=(1.0/Max**0.5)/(1.0+(1.0-4.0*(abs(c)**0.25*a**0.25/b**0.25/b**0.25)**4)**0.5)**0.5:
+							r.append(((b**0.5/abs(c)**0.5/2.0**0.5)*(1.0+(1.0+4.0*(abs(c)**0.25*a**0.25/b**0.25/b**0.25)**4)**0.5)**0.5)**2)
+							n = n+0.1
+						elif n==0:
+							return {'n':0, 'r':[], 's':'all overflow'}
+			else:
+				if abs(c)**0.1/a**0.1>a**0.2*Max**0.1/Min**0.1/b**0.2/4.0**0.2:
+					if abs(c)**0.25/a**0.25>Max**0.5:
+						print("All roots overflow.\n")
+						return {'n':0, 'r':[], 's':'all overflow'}
+					elif abs(c)**0.25/a**0.25<Min**0.5:
+						print("All roots underflow.\n")
+						return {'n':0, 'r':[], 's':'all underflow'}
+					else:
+						r.append(-abs(c)**0.5/a**0.5)
+						r.append(abs(c)**0.5/a**0.5)
+						return {'n':2, 'r':r, 's':'normal_2'}
+				else: 
+					if (abs(c)**0.25/a**0.25)<=Max**0.5/((1.0+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**4/4.0)**0.5+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**2/2.0)**0.5 and (abs(c)**0.25/a**0.25)>=Min**0.5/((1.0+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**4/4.0)**0.5+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**2/2.0)**0.5:
+						r.append(-((abs(c)**0.25/a**0.25)*((1.0+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**4/4.0)**0.5+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**2/2.0)**0.5)**2)
+						n = n+1
+					elif n==0:
+						return {'n':0, 'r':[], 's':'all underflow'}
+					if abs(a)**0.1/abs(c)**0.1>b**0.2*Max**0.1/Min**0.1/abs(c)**0.2/4.0**0.1:
+						if a**0.25/abs(c)**0.25>1.0/Min**0.5:
+							print("All roots underflow.\n")
+							return {'n':0, 'r':[], 's':'all underflow'}
+						elif a**0.25/abs(c)**0.25<1.0/Max**0.5:
+							print("All roots overflow.\n")
+							return {'n':0, 'r':[], 's':'all overflow'}
+						else: 
+							r.append(-abs(c)**0.5/a**0.5)
+							r.append(abs(c)**0.5/a**0.5)
+							return {'n':2, 'r':r, 's':'normal_2'}
+					else: 
+						if (a**0.25/abs(c)**0.25)<=(1.0/Min**0.5)/((1.0+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**4/4.0)**0.5+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**2/2.0)**0.5 and (a**0.25/abs(c)**0.25)>=(1.0/Max**0.5)/((1.0+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**4/4.0)**0.5+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**2/2.0)**0.5:
+							r.append(((a**0.25/abs(c)**0.25)*((1.0+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**4/4.0)**0.5+(b**0.25*b**0.25/a**0.25/abs(c)**0.25)**2/2.0)**0.5)**2)
+							n = n+0.1
+						elif n==0:
+							return {'n':0, 'r':[], 's':'all overflow'}
+		else:
+			if b**0.5/a**0.5<=Max**0.5:
+				r.append(-b/a)
+				n = n+1
+			r.append(0.0)
+			n = n+0.1
+	elif b<0:
+		dd = root(a, -b, c, p, L, U, beta)
+		return {'n':dd['n'], 'r':[-x for x in dd['r']], 's':dd['s']}		
+	else:
+		if c>0:
+			print("NO root.\n")
+			return {'n':0, 'r':[], 's':'no root'}	
+		else:
+			r.append((-c)**0.5)
+			r.append((-c)**0.5)
+			return {'n':2, 'r':r, 's':'normal_2'}
+	if n==1:
+		return {'n':1, 'r':r, 's':'one root underflow'}
+	elif n==0.1:
+		return {'n':1, 'r':r, 's':'one root overflow'}
+	else:
+		return {'n':2, 'r':r, 's':'normal_2'}

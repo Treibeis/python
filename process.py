@@ -7,24 +7,7 @@ import matplotlib.patches as pltp
 from matplotlib.collections import PatchCollection
 from scipy.optimize import *
 import sys
-
-Hfrac = 0.76
-XeH = 0.0
-XeHe = 0.0
-
-UL = 3.085678e21
-#UL = 1.0
-UM = 1.989e43
-#UM = 1.0
-UV = 1.0e5
-#UV = 1.0
-
-UT = UL/UV
-UD = UM/UL**3
-UP = UM/UL/UT**2
-UE = UM*UL**2/UT**2
-
-G = GRA*UM*UT**2/UL**3
+from cosmology import *
 
 def temp_(u, Y, X = H_FRAC, gamma = 5.0/3):
 	M = PROTON*4.0/(3*X+1+4*X*Y)

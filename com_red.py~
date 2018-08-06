@@ -1,0 +1,424 @@
+import numpy as np
+from scipy.interpolate import *
+#from txt import *
+import math
+import time
+import csv
+#import random
+import struct 
+import matplotlib.pyplot as plt
+
+mp_r = 129391565095.19
+mp_l = 146268717741.28
+
+def sample(cata, mag_0 = 20.5, step = 0.01, n_max = 4*10**4):
+	out = cata
+	m = mag_0
+	while len(out[0])>n_max:
+		m -= step
+		raw = [[], [], [], [], []]
+		for i in range(len(out[0])):
+			if out[3][i]<=m:
+				raw[0].append(out[0][i])
+				raw[1].append(out[1][i])
+				raw[2].append(out[2][i])
+				raw[3].append(out[3][i])
+				raw[4].append(out[4][i])
+		out = raw
+	print ('mag_r_cut:', m)
+	return out	
+
+def cut(d, xr = [100.0,140.0], yr = [0.0,40.0], zr = [0.0,0.4]):
+	out = [[], [], []]
+	for i in range(len(d[0])):
+		t1, t2, t3 = 0, 0, 0
+		x, y, z = d[0][i], d[1][i], d[2][i]
+		if ((xr[0]<=x)and(x<=xr[1])):
+			t1 = 1
+		if ((yr[0]<=y)and(y<=yr[1])):
+			t2 = 1
+		if ((zr[0]<=z)and(z<=zr[1])):
+			t3 = 1
+		if ((t1+t2+t3))==3:
+			out[0].append(d[0][i])
+			out[1].append(d[1][i])
+			out[2].append(d[2][i])
+	print (len(out[0]))
+	return out
+
+
+def redeuss(s2 = 'rpcdmw5', s1 = 'fof_cone2592_n2048', num = 512, s3 = 'masst'):
+	out = [[], [], [], [], []]
+	for i in range(num):
+		s4 = str(i).zfill(5)
+		s = s1+'_'+s2+'_'+s3+'_'+s4
+		o = ri(s)
+		out[0] += o[0]
+		out[1] += o[1]
+		out[2] += o[2]
+		out[3] += o[3]
+		out[4] += o[4]
+	print (len(out[0]))
+	return out
+
+def ri(s, mp = 1, box = [2592.0, 2592.0, 2592.0], ed = '>'):
+	out = [[], [], [], [], []]
+	inte = ed+'i'
+	real = ed+'f'
+	linte = ed+'q'
+	with open(s, 'rb') as f:
+		a = f.read(4)
+		num = struct.unpack(inte,f.read(4))[0]
+		print (num)
+		a = f.read(4)
+		for i in range(num):
+			a = f.read(4)
+			ID = struct.unpack(linte,f.read(8))[0]
+			npart = struct.unpack(inte, f.read(4))[0]*mp
+			x = struct.unpack(real, f.read(4))[0]*box[0]
+			y = struct.unpack(real, f.read(4))[0]*box[1]
+			z = struct.unpack(real, f.read(4))[0]*box[2]
+			a = f.read(4)
+			out[0].append(x)
+			out[1].append(y)
+			out[2].append(z)
+			out[3].append(npart)
+			out[4].append(ID)
+	return out
+
+def recsv(s, n, k = 1, t = 1):
+	out = []
+	j = 0
+	for i in range(n):
+		out.append([])
+	with open(s, 'r') as csvfile:
+		reader = csv.reader(csvfile)
+		for row in reader:
+			if j<k:
+				print (row)
+			else:
+				for i in range(n):
+					out[i].append(float(row[i]))
+			j = j+1
+	if t!=0:
+		for i in range(n):
+			out[i].reverse()
+			out[i] = np.array(out[i])
+	return out
+
+def retxt(s, n, k = 1, t = 1):
+	out = []
+	for i in range(n):
+		out.append([])
+	j = 0
+	with open(s, 'r') as f:
+		for line in f:
+			lst = line.split()
+			if j<k:
+				print (lst[0])
+			else:
+				for i in range(n):
+					out[i].append(float(lst[i]))
+			j = j+1
+	if t!=0:
+		for i in range(n):
+			out[i].reverse()
+			out[i] = np.array(out[i])
+	return out
+
+def totxt(s, l, ls, t = 0, k = 0):
+	j = 0
+	with open(s, 'w') as f:
+		if t!=0:
+			for r in range(len(ls)):
+				f.write(ls[r])
+				f.write(' ')
+			f.write('\n')
+		for i in range(len(l[0])):
+			if j<k:
+				print (l[0][i])
+			else:
+				for s in range(len(l)):
+					f.write(str(l[s][i]))
+					f.write(' ')
+				f.write('\n')
+			j = j+1
+
+# The codes above are meant for file I/O.
+
+
+D_Z_L = retxt('d_z_L.txt', 2, 0, 0)
+H_Z_L = retxt('H_z_L.txt', 2, 0, 0)
+D_Z_R = retxt('d_z_R.txt', 2, 0, 0)
+H_Z_R = retxt('H_z_R.txt', 2, 0, 0)
+
+
+def tracer(cata, d_z = D_Z_L, zr = [0.0,0.7], z_bin = 0.01):
+	nub = int((zr[1]-zr[0])/z_bin)+1
+	his, edge = np.histogram(cata[2], np.linspace(zr[0], zr[1], nub))
+	z_cord = [(edge[i+1]+edge[i])/2.0 for i in range(nub-1)]
+	dz = interp1d(d_z[1],d_z[0])#,kind='cubic')
+	ratio = (160.0*math.pi/180.0)*(1-math.cos(70.0*math.pi/180.0))/4/math.pi
+	volume = [ratio*(dz(edge[i+1])**3-dz(edge[i])**3)*4.0*math.pi/3.0 for i in range(nub-1)]
+	density = [his[i]/volume[i] for i in range(nub-1)]
+	return [his, edge, z_cord, density]
+
+def modify(cata, ref, dm = 10):
+	edge = ref[1]
+	his = ref[0]
+	num = len(cata[0])
+	raw = []
+	for k in range(num):
+		raw.append((cata[0][k],cata[1][k],cata[2][k],cata[3][k]))
+	raw = sorted(raw, key=lambda raw:raw[2])
+	nub = len(ref[0])
+	out = [[], [], []]
+	j = 0
+	for i in range(nub):
+		sub = []
+		while ((j<num)and(raw[j][2]<=edge[i+1])):
+			mod = (raw[j][0], raw[j][1], raw[j][2], raw[j][3]+dm*np.random.normal())
+			sub.append(mod)
+			j += 1
+		if len(sub)<his[i]:
+			print ('There are too many galaxies in the redshift range:', edge[i], edge[i+1])
+			return []
+		sub = sorted(sub, key=lambda sub:sub[3])
+		sub.reverse()
+		if sub!=[]:
+			for k in range(his[i]):
+				out[0].append(sub[k][0])
+				out[1].append(sub[k][1])
+				out[2].append(sub[k][2])
+	return out
+			
+	
+def reconvert(lred, zr = [0.2, 0.4], fo = 'DR21.txt', label = 'obs', d_z = D_Z_L, H_z = H_Z_L, ob = (1296.0, 1296.0, 1296.0), box = (2592.0, 2592.0, 2592.0), sky = [[0.0,360.0], [-90.0,90.0]], ko = 0):
+	start = time.time()
+	dz = interp1d(d_z[1],d_z[0])#,kind='cubic')
+	#zd = interp1d(d_z[0],d_z[1])#,kind='cubic')
+	#Hz = interp1d(H_z[1],H_z[0])#,kind='cubic')
+	print ('Interpolation: done', time.time()-start, 's')
+	dmax = dz(zr[1])
+	if dmax>min([-ob[i]+box[i] for i in range(3)]):
+		print ('The box is too small.')
+		return {}
+	raw = []
+	for i in range(len(lred[0])):
+		if lred[2][i]>=0:
+			r = dz(lred[2][i])
+			dec = lred[1][i]*math.pi/180.0
+			ra = lred[0][i]*math.pi/180.0
+			x = r*math.cos(dec)*math.cos(ra)+ob[0]
+			y = r*math.cos(dec)*math.sin(ra)+ob[1]
+			z = r*math.sin(dec)+ob[2]
+			raw.append((x,y,z,lred[3][i]))
+	real = []
+	for i in range(len(raw)):
+		t1, t2, t3 = 0, 0, 0
+		if (0<=raw[i][0]) and (raw[i][0]<=box[0]):
+			t1 = 1
+		if (0<=raw[i][1]) and (raw[i][1]<=box[1]):
+			t2 = 1
+		if (0<=raw[i][2]) and (raw[i][2]<=box[2]):
+			t3 = 1
+		if (t1+t2+t3==3):
+			real.append(raw[i])
+	output = [[], [], [], []]
+	for i in range(len(real)):
+		output[0].append(real[i][0])
+		output[1].append(real[i][1])
+		output[2].append(real[i][2])
+		output[3].append(real[i][3])
+	print ('Sampling: done', time.time()-start, 's')
+	totxt(fo, output, ['x', 'y', 'z', 'r'], 1, ko)
+	d = {}
+	d['output'], d['ob'], d['box'], d['label'], d['num'], d['l'] = real, ob, box, label, len(real), output
+	print ('All done', time.time()-start, 's')
+	return d
+
+# The code below is to convert real boxes to lightcones.
+
+def convert2(lreal, zr = [0.2,0.4], fo = 'out1.txt', label = 'R-P', d_z = D_Z_L, H_z = H_Z_L, ob = (1296.0, 1296.0, 1296.0), box = (2592.0, 2592.0, 2592.0), sky = [[0.0,360.0],[0.0,90.0]], ko = 0):
+	start = time.time()
+	dz = interp1d(d_z[1],d_z[0])#,kind='cubic')
+	zd = interp1d(d_z[0],d_z[1])#,kind='cubic')
+	#Hz = interp1d(H_z[1],H_z[0])#,kind='cubic')
+	print ('Readin and interpolation: done', time.time()-start, 's')
+	dmax = dz(zr[1])
+	real = []
+	for i in range(len(lreal[0])):
+		real.append((lreal[0][i]-ob[0],lreal[1][i]-ob[1],lreal[2][i]-ob[2],lreal[3][i],lreal[4][i]))
+	#edge_x = dmax+ob[0]
+	#edge_y = dmax+ob[1]
+	print ('Construction of the catalogue in real space: done', time.time()-start, 's')
+	#for i in range(len(lreal[0])):
+		#if real[i][0]>edge_x:
+			#displace = (real[i][0]-box[0], real[i][1], real[i][2], real[i][3], real[i][4], real[i][5])
+			#real.append(displace)
+		#elif real[i][1]>edge_y:
+			#displace = (real[i][0], real[i][1]-box[1], real[i][2], real[i][3], real[i][4], real[i][5])
+			#real.append(displace)
+	#print ('Arrangement of peioridical boundary condition: done', time.time()-start, 's') 
+	raw = []
+	for i in range(len(real)):
+		x, y, z = real[i][0], real[i][1], real[i][2]
+		r = (x**2+y**2+z**2)**0.5
+		#if (r>dz(zr[0])) and (r<dz(zr[1])):
+		z_real = zd(r)
+		dec = math.asin(z/r)*180.0/math.pi
+		if y>=0:
+			ra =  math.acos(x/(x**2+y**2)**0.5)*180.0/math.pi
+		else:
+			ra = 360.0 - math.acos(x/(x**2+y**2)**0.5)*180.0/math.pi
+		raw.append((ra, dec, z_real, real[i][3], real[i][4]))
+	print ('Generatation of raw output: done', time.time()-start, 's')
+	redshift = []
+	output = [[], [], [], [], []]
+	for i in range(len(raw)):
+		t1, t2, t3 = 0, 0, 0
+		if (sky[0][0]<raw[i][0]) and (sky[0][1]>raw[i][0]):
+			t1 = 1
+		if (sky[1][0]<raw[i][1]) and (sky[1][1]>raw[i][1]):
+			t2 = 1
+		if (zr[0]<raw[i][2]) and (zr[1]>raw[i][2]):
+			t3 = 1
+		if (t1+t2+t3==3):
+			redshift.append(raw[i])
+	redshift = sorted(redshift, key=lambda redshift:redshift[2])
+	for i in range(len(redshift)):
+		output[0].append(redshift[i][0])
+		output[1].append(redshift[i][1])
+		output[2].append(redshift[i][2])
+		output[3].append(redshift[i][3])
+		output[4].append(redshift[i][4])
+	print ('Sampling: done', time.time()-start, 's')
+	totxt(fo, output, ['ra', 'dec', 'z', 'mass', 'ID'], 1, 0)
+	d = {}
+	d['output'], d['zr'], d['sky'], d['label'], d['num'], d['l'] = redshift, zr, sky, label, len(redshift), output
+	print ('All done', time.time()-start, 's')
+	return d
+
+def convert1(lreal, zr = [0.2,0.4], fo = 'out1.txt', label = 'R-P', d_z = D_Z_L, H_z = H_Z_L, ob = (0.0, 0.0, 0.0), box = (2592.0, 2592.0, 2592.0), sky = [[0.0,360.0],[-90.0,90.0]], ko = 0):
+	"""zr is the redshift range. \
+	lreal is the list (table) of the real space data. \
+	fo is the name of the output file. \
+	d_z and H_z are lists of comoving distance/Hubble parameter and redshift \
+	ob is the position of the observer \
+	box is the size of the simulation box \
+	sky is the area in the sky, whose default value corresponds to \
+	0<dec<90, 0<ra<360 (unit: degree) \
+	the first three columns of lreal are the coordinates in Mpc h^-1\
+	while the following three are the velocities in km s^-1 \
+	the last column is the halo mass
+	ra, dec, z, mass correspond to the 1st, 3rd, 2nd and 4th column of the output file \
+	the output dec and ra are in degree"""
+	start = time.time()
+	dz = interp1d(d_z[1],d_z[0])#,kind='cubic')
+	zd = interp1d(d_z[0],d_z[1])#,kind='cubic')
+	Hz = interp1d(H_z[1],H_z[0])#,kind='cubic')
+	print ('Readin and interpolation: done', time.time()-start, 's')
+	dmax = dz(zr[1])
+	real = []
+	for i in range(len(lreal[0])):
+		real.append((lreal[0][i]-ob[0],lreal[1][i]-ob[1],lreal[2][i]-ob[2],lreal[3][i],lreal[4][i],lreal[5][i],lreal[6][i]))
+	#edge_x = dmax+ob[0]
+	#edge_y = dmax+ob[1]
+	print ('Construction of the catalogue in real space: done', time.time()-start, 's')
+	#for i in range(len(lreal[0])):
+		#if real[i][0]>edge_x:
+			#displace = (real[i][0]-box[0], real[i][1], real[i][2], real[i][3], real[i][4], real[i][5])
+			#real.append(displace)
+		#elif real[i][1]>edge_y:
+			#displace = (real[i][0], real[i][1]-box[1], real[i][2], real[i][3], real[i][4], real[i][5])
+			#real.append(displace)
+	#print ('Arrangement of peioridical boundary condition: done', time.time()-start, 's') 
+	raw = []
+	for i in range(len(real)):
+		x, y, z = real[i][0], real[i][1], real[i][2]
+		r = (x**2+y**2+z**2)**0.5
+		#if (r>dz(zr[0])) and (r<dz(zr[1])):
+		z_real = zd(r)
+		vx, vy ,vz = real[i][3], real[i][4], real[i][5]
+		vlos = (vx*x+vy*y+vz*z)/r
+		s = r + vlos*(1+z_real)/Hz(z_real)
+			#if (s>dz(zr[0])) and (s<dz(zr[1])):
+		z_dis = zd(s)
+		dec = math.asin(z/r)*180.0/math.pi
+		if y>=0:
+			ra = math.acos(x/(x**2+y**2)**0.5)*180.0/math.pi
+		else:
+			ra = - math.acos(x/(x**2+y**2)**0.5)*180.0/math.pi
+		raw.append((ra, dec, z_dis, real[i][6]))
+	print ('Generatation of raw output: done', time.time()-start, 's')
+	redshift = []
+	output = [[], [], [], []]
+	for i in range(len(raw)):
+		t1, t2, t3 = 0, 0, 0
+		if (sky[0][0]<raw[i][0]) and (sky[0][1]>raw[i][0]):
+			t1 = 1
+		if (sky[1][0]<raw[i][1]) and (sky[1][1]>raw[i][1]):
+			t2 = 1
+		if (zr[0]<raw[i][2]) and (zr[1]>raw[i][2]):
+			t3 = 1
+		if (t1+t2+t3==3):
+			redshift.append(raw[i])
+	redshift = sorted(redshift, key=lambda redshift:redshift[2])
+	for i in range(len(redshift)):
+		output[0].append(redshift[i][0])
+		output[1].append(redshift[i][1])
+		output[2].append(redshift[i][2])
+		output[3].append(redshift[i][3])
+	print ('Sampling: done', time.time()-start, 's')
+	totxt(fo, output, ['ra', 'dec', 'z', 'mass'], 1, 0)
+	d = {}
+	d['output'], d['zr'], d['sky'], d['label'], d['num'], d['l'] = redshift, zr, sky, label, len(redshift), output
+	print ('All done', time.time()-start, 's')
+	return d
+		
+def combine(d1, d2, delta = [1.0, 1.0, 0.0025], fo = 'combine.txt'):
+	"""d1, d2 are supposed to be outputs of function convert or combine \
+	d2 corresponds to the shell with higher redshift \
+	fo is the name of output file \
+	ra, dec, z, mass correspond to the 1st, 2nd, 3rd and 4th column of the output file \
+	the output dec and ra are in degree"""
+	start = time.time()
+	overlap = [d2['zr'][0], d1['zr'][1]]
+	zr = [d1['zr'][0],d2['zr'][1]]
+	raw = d1['output']
+	for i in range(len(d2['output'])):
+		raw.append(d2['output'][i])
+	raw = sorted(raw, key=lambda raw:raw[2])
+	redshift = []
+	mark = np.zeros(len(raw))
+	for i in range(len(raw)-1):
+		t1, t2, t3 = 0, 0, 0
+		if abs(raw[i][0]-raw[i+1][0])<delta[0]:
+			t1 = 1
+		if abs(raw[i][1]-raw[i+1][1])<delta[1]:
+			t2 = 1
+		if abs(raw[i][2]-raw[i+1][2])<delta[2]:
+			t3 = 1
+		if (t1+t2+t3==3):
+			mark[i] = 1
+		if mark[i]==0:
+			redshift.append(raw[i])
+	#print ('Number of halos removed: ', sum(mark))
+	nr = 0
+	redshift.append(raw[len(raw)-1])
+	output = [[], [], [], []]
+	for i in range(len(redshift)):
+		output[0].append(redshift[i][0])
+		output[1].append(redshift[i][1])
+		output[2].append(redshift[i][2])
+		output[3].append(redshift[i][3])
+	print ('Sampling: done', time.time()-start, 's')
+	totxt(fo, output, ['ra', 'dec', 'z', 'mass'], 1, 0)
+	d = {}
+	d['output'], d['zr'], d['sky'], d['label'], d['num'], d['l'] = redshift, zr, d1['sky'], d1['label'], len(redshift), output
+	return d
+
+
+
+
+			
