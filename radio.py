@@ -48,7 +48,7 @@ def n_a(a):
 	return 10**nz(z)
 
 # Radio background
-def Jnu_cosmic(z1 = 6, nu = 100, z0 = 20, L = lambda nu: 4e24, n_a = n_a, Om = 0.315, h = 0.6774,mode=0,trec = 100e6):
+def Jnu_cosmic(z1 = 6, nu = 100, z0 = 20, L = lambda nu: 4e24, n_a = n_a, Om = 0.315, h = 0.6774,mode=0,trec = 200e6):
 	if mode==0:
 		def integrand(a):
 			return L(np.log10(max(min(nu*1e6/a,10*numax()),numin()*10**0.5)))*n_a(a)*SPEEDOFLIGHT*dt_da(a, Om, h)/(UL*1e3/h)**3/4/np.pi
@@ -69,6 +69,9 @@ def Tnu_sky(nu):
 
 def Tnu_sky_(nu):
 	return 2.72527+21.96*(nu/310)**-2.643+1.243*(nu/310)**-2
+
+def Tnu_sky_ff(nu, ru):
+	return (1.243+0.611*ru)*(nu/310)**-2
 
 def Tnu_sky_syn(nu):
 	return 21.96*(nu/310)**-2.643

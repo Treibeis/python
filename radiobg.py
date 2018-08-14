@@ -18,10 +18,14 @@ if __name__ == "__main__":
 	A_syn0 = 10**Lp0(p_index)#1.1202483164633895e+59
 	A_syn1 = 10**Lp1(p_index)#1.8152757384235942e+58
 	facB = 1.0
-	facn = 2.7653e-6
+	facn = 3.4619e-5
 	#facn = 1.0
 	L_nu_syn0 = lambda x: jnu_syn_(10**x, A_syn0, p_index)*facB**((p_index+1)/4)*facn
 	L_nu_syn1 = lambda x: jnu_syn_(10**x, A_syn1, p_index)*facB**((p_index+1)/4)*facn
+
+	redshift = lLp0[0][0]
+	dL = DZ(redshift)*(1+redshift)
+	print('Syn Flux: {} [erg s^-1 cm^-2 Hz^-1]'.format((1+redshift)*L_nu_syn0(np.log10(1.4e9*(1+redshift)))/dL**2/4/np.pi))
 
 	hmf00 = hmf.MassFunction()
 	hmf00.update(n=0.966, sigma_8=0.829,cosmo_params={'Om0':0.315,'H0':67.74},Mmin=3,Mmax=9)
@@ -40,22 +44,22 @@ if __name__ == "__main__":
 	for i in range(len(lz_base)):
 		hmf0.update(z=lz_base[i])
 		lm = np.log10(hmf0.m/h)
-		ln = np.log10(hmf0.ngtm)
+		ln = np.log10(hmf0.ngtm*h**3)
 		nm = interp1d(lm,ln)
 		ln_M_z0[i] = (10**nm(9)-10**nm(10))
 		hmf1.update(z=lz_base[i])
 		lm = np.log10(hmf1.m/h)
-		ln = np.log10(hmf1.ngtm)
+		ln = np.log10(hmf1.ngtm*h**3)
 		nm = interp1d(lm,ln)
 		ln_M_z1[i] = (10**nm(9)-10**nm(10))
 		hmf00.update(z=lz_base[i])
 		lm = np.log10(hmf00.m/h)
-		ln = np.log10(hmf00.ngtm)
+		ln = np.log10(hmf00.ngtm*h**3)
 		nm = interp1d(lm,ln)
 		ln_M_z00[i] = (10**nm(-2*np.log10((1+lz_base[i])/10)+6)-10**nm(np.log10(2.5*((1+lz_base[i])/10)**-1.5)+7))
 	hmf00.update(z=6)
 	lm = np.log10(hmf00.m/h)
-	ln = np.log10(hmf00.ngtm)
+	ln = np.log10(hmf00.ngtm*h**3)
 	nm = interp1d(lm,ln)
 	ln_M_z_norm = (10**nm(-2*np.log10((1+6)/10)+6)-10**nm(np.log10(2.5*((1+6)/10)**-1.5)+7))
 
@@ -200,12 +204,13 @@ if __name__ == "__main__":
 	ax2 = ax1.twiny()
 	ax1.plot(lnu, Tnu(lnu,np.array(lJnu1)), label=r'Structure formation, '+lmodel[1],lw=1)
 	ax1.plot(lnu, Tnu(lnu,np.array(lJnu0)), label=r'Structure formation, '+lmodel[0],ls='--',lw=1)
-	ax1.plot(lnu, Tnu(lnu,JHII_z(6)),'-.',label=r'$\mathrm{H_{II}}$ regions ($M_{*}\sim 100\ M_{\odot})$',lw=1)
+	ax1.plot(lnu, Tnu(lnu,JHII_z(6)),'-.',label=r'Mini-halo $\mathrm{H_{II}}$ regions',lw=1)# ($M_{*}\sim 100\ M_{\odot})$',lw=1)
 	#ax1.plot(lnu[lnu<1420/7], Tnu(lnu[lnu<1420/7],10**J21_z(1420/lnu[lnu<1420/7]-1)),color='r',ls=':',lw=1)
-	ax1.plot(lnu[lnu>0], Tnu(lnu[lnu>0],10**J21_z(1420/lnu[lnu>0]-1)), ls=':',color='r', label=r'21-cm emission, $\nu_{\mathrm{obs}}=1420/(1+z)\ \mathrm{MHz}$',lw=1)
+	ax1.plot(lnu[lnu>0], Tnu(lnu[lnu>0],10**J21_z(1420/lnu[lnu>0]-1)), ls=':',color='r', label=r'21 cm emission',lw=1)#, $\nu_{\mathrm{obs}}=1420/(1+z)\ \mathrm{MHz}$',lw=1)
 	lTnu_IGM = [Tnu(x,Jnu_bg(x)) for x in lnu]
 	ax1.plot(lnu, lTnu_IGM, ls='-.',lw=2,color='g',label=r'ionized diffuse IGM')
-	ax1.plot(lnu,Tnu_SKA(lnu),'k--',label=r'SKA, 10$\sigma$, $10^{3}$ h',lw=2)
+	ax1.plot(lnu,Tnu_SKA(lnu),'k--',label=r'SKA',lw=1)#, 10$\sigma$, $10^{3}$ h',lw=2)
+	ax1.fill_between(lnu,1e3*Tnu_sky_ff(lnu,-1),1e3*Tnu_sky_ff(lnu,1),facecolor='gray',label=r'$T_{\mathrm{ff}}^{\mathrm{G}}$',alpha=0.5)
 	ax2.set_xscale('log')
 	loc = [1420/3.0,1420/7.0,1420/10.215,1420/13.593,1420/21]
 	ax2.set_xticks(loc)
@@ -218,7 +223,7 @@ if __name__ == "__main__":
 	ax1.fill_between([1420/7,1400],[1e-3,1e-3],[yup,yup],facecolor='gray',alpha=0.2)
 	ax1.set_xlim(50,1400)
 	ax2.set_xlim(ax1.get_xlim())
-	ax1.set_ylim(1e-3,yup)
+	ax1.set_ylim(1e-4,yup)
 	ax1.set_xlabel(r'$\nu_{\mathrm{obs}}\ [\mathrm{MHz}]$')
 	ax1.set_ylabel(r'$\langle\delta T\rangle\ [\mathrm{mK}]$')
 	ax1.legend()
@@ -241,9 +246,10 @@ if __name__ == "__main__":
 	ax1 = fig.add_subplot(111)
 	ax1.plot(lnu/1e3, Tnu(lnu,np.array(lJnu1)), label=r'Structure formation, '+lmodel[1],lw=1)
 	ax1.plot(lnu/1e3, Tnu(lnu,np.array(lJnu0)), label=r'Structure formation, '+lmodel[0],ls='--',lw=1)
-	ax1.plot(lnu/1e3, Tnu(lnu,JHII_z(6)),'-.',label=r'$\mathrm{H_{II}}$ regions ($M_{*}\sim 100\ M_{\odot})$',lw=1)
+	ax1.plot(lnu/1e3, Tnu(lnu,JHII_z(6)),'-.',label=r'Mini-halo $\mathrm{H_{II}}$ regions',lw=1)# ($M_{*}\sim 100\ M_{\odot})$',lw=1)
 	ax1.plot(lnu/1e3, [Tnu(x,Jnu_bg(x)) for x in lnu], ls='-.',lw=2,color='g',label=r'ionized diffuse IGM')
-	ax1.plot(lnu/1e3,Tnu_SKA(lnu),'k--',label=r'SKA, 10$\sigma$, $10^{3}$ h',lw=2)
+	ax1.plot(lnu/1e3,Tnu_SKA(lnu),'k--',label=r'SKA', lw=2)#, 10$\sigma$, $10^{3}$ h',lw=2)
+	ax1.fill_between(lnu/1e3,1e3*Tnu_sky_ff(lnu,-1),1e3*Tnu_sky_ff(lnu,1),facecolor='gray',label=r'$T_{\mathrm{ff}}^{\mathrm{G}}$',alpha=0.5)
 	ax1.set_xlim(1.0,90)
 	yup = np.max([0.31,np.max(Tnu(lnu,np.array(lJnu1))),np.max(Tnu(lnu,np.array(lJnu0)))])*1.05
 	ax1.set_ylim(1e-6,yup)
@@ -286,7 +292,7 @@ if __name__ == "__main__":
 	ax1.set_xlim(0,20)
 	#ax2.set_xlim(ax1.get_xlim())
 	ax1.set_ylim(1e-9,yup)
-	ax1.set_xlabel(r'$z$')
+	ax1.set_xlabel(r'$z_{\mathrm{end}}$')
 	ax1.set_ylabel(r'$\langle\delta T\rangle(>z) [\mathrm{mK}]$')
 	ax1.legend()
 	if mode==0:
