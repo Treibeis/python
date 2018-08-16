@@ -9,7 +9,7 @@ DN=[0.000,0.1666666666666667,0.3333333333333333,0.50,0.6666666666666666,0.833333
 
 num=len(RH)*len(ROP)*len(TN)*len(DN)
 
-WG = np.reshape(np.array(np.matrix(retxt('le_cube',3,39,0)).transpose()),(len(RH),len(ROP),len(TN),len(DN)))
+#WG = np.reshape(np.array(np.matrix(retxt('le_cube',3,39,0)).transpose()),(len(RH),len(ROP),len(TN),len(DN)))
 
 def LambdaBre(T, nhII, nheII, nheIII, ne): #LAM(1)
 	if T>5.e3:
@@ -143,7 +143,7 @@ def ncrit(T):
 	return out
 
 # old
-
+"""
 def LambdaH20(T, nh2=1e-3, nh=1):
 	rop = 9.0*np.e**(-170.5/T)
 	if nh2>0:
@@ -228,7 +228,7 @@ def LambdaH20(T, nh2=1e-3, nh=1):
 	#LH2 = LTE/(1.0+XNCRIT/nh)
 		LH2 = nh2*LOW*LTE/(LTE+LOW)
 	return LH2
-
+"""
 
 
 
