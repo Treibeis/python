@@ -16,7 +16,8 @@ def LambdaBre(T, nhII, nheII, nheIII, ne): #LAM(1)
 		gff = 1.1+0.34*np.e**(-(5.5-np.log10(T))**2.0/3.0)
 		L = 1.42e-27*gff*T**0.5*(nhII+nheII+4.0*nheIII)*ne
 	else:
-		L = 1.e-52
+		gff = 1.1+0.34*np.e**(-(5.5-np.log10(T))**2.0/3.0)
+		L = 1.42e-27*gff*T**0.5*(nhII+nheII+4.0*nheIII)*ne#1.e-52
 	return L
 
 def LambdaIC(T, z=20, ne=1e4):
