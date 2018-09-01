@@ -86,6 +86,10 @@ def Lvir(m = 1e10, z = 10.0, delta = 200):
 	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
 	return 3*GRA*M**2/Rvir/tff(z, delta)/5
 
+def mmw(xeH = XeH, xeHe = XeHe, X = Hfrac):
+	xh = 4*X/(1+3*X)
+	return 4.0/(1.0+3*X)/(xh*(1+xeH)+(1-xh)*(1+xeHe))
+
 def Tvir(m = 1e10, z = 10.0, delta = 200):
 	M = m*UM/1e10
 	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
