@@ -27,9 +27,9 @@ if __name__ == "__main__":
 	#p_index = 2.5
 	#lsyn = luminoisty_syn(sn, ncore=ncore,box=[[low]*3,[up]*3],Tsh=Tsh,p_index=p_index)
 	#print('Synchrotron normalization factor: {} [z, A, p]'.format(lsyn))
-	lp = np.linspace(2.0,3.0,11)
-	llsyn = np.array([luminosity_syn(sn, ncore=ncore,box=[[low]*3,[up]*3],Tsh=Tsh,p_index=x,facB=1e-4) for x in lp]).T
-	totxt('Lp_syn_wdm_'+str(sn)+'.txt', llsyn,0,0,0)
+	#lp = np.linspace(2.0,3.0,11)
+	#llsyn = np.array([luminosity_syn(sn, ncore=ncore,box=[[low]*3,[up]*3],Tsh=Tsh,p_index=x,facB=1e-4) for x in lp]).T
+	#totxt('Lp_syn_wdm_'+str(sn)+'.txt', llsyn,0,0,0)
 
 	nump = 32
 	lnu = 10**np.linspace(np.log10(numin())+0.5,np.log10(numax())+1.0,nump)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 	plt.figure()
 
 	#plt.contourf(test['Y'],test['X'],np.log10(test['I']),np.linspace(-36,-19,100),cmap=plt.cm.gist_ncar)#norm=LogNorm()
-	plt.contourf(test['Y'],test['X'],np.log10(test['I']),np.linspace(-36,max(-19,np.max(np.log10(test['I']))),100),cmap=plt.cm.gist_ncar)#norm=LogNorm()	
+	plt.contourf(test['Y'],test['X'],np.log10(test['I']),np.linspace(min(-32.5,np.max(np.log10(test['I']))),max(-16.5,np.max(np.log10(test['I']))),100),cmap=plt.cm.gist_ncar)#norm=LogNorm()	
 	cb = plt.colorbar()
 	cb.set_label(r'$\log(I_{\nu}\ [\mathrm{erg\ s^{-1}\ cm^{-2}\ Hz^{-1}\ sr^{-1}}])$')
 	plt.xlabel(r'$x\ [h^{-1}\mathrm{kpc}]$')
