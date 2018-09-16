@@ -38,24 +38,24 @@ G = GRA*UM*UT**2/UL**3
 
 YR = 3600*24*365
 # Cosmology
-def H(a, Om = 0.315, h = 0.6774):
+def H(a, Om = 0.315, h = 0.6774, OR = 9.54e-5):
 	H0 = h*100*UV/UL/1e3
-	H = H0*(Om/a**3+(1-Om))**0.5
+	H = H0*(Om/a**3+(1-Om)+OR/a**4)**0.5
 	return H
 
-def DZ(z, Om = 0.315, h = 0.6774):
+def DZ(z, Om = 0.315, h = 0.6774, OR = 9.54e-5):
 	def integrand(a):
-		return SPEEDOFLIGHT/(a**2)/H(a, Om, h)
+		return SPEEDOFLIGHT/(a**2)/H(a, Om, h, OR)
 	I = quad(integrand, 1/(1+z), 1, epsrel = 1e-8)
 	return I[0]
 
-def dt_da(a, Om = 0.315, h = 0.6774):
-	return 1/a/H(a, Om, h)
+def dt_da(a, Om = 0.315, h = 0.6774, OR = 9.54e-5):
+	return 1/a/H(a, Om, h, OR)
 
-def TZ(z, Om = 0.315, h = 0.6774):
+def TZ(z, Om = 0.315, h = 0.6774, OR = 9.54e-5):
 	#def integrand(a):
 	#	return 1/a/H(a, Om, h)
-	I = quad(dt_da, 0, 1/(1+z), args = (Om, h), epsrel = 1e-8)
+	I = quad(dt_da, 0, 1/(1+z), args = (Om, h, OR), epsrel = 1e-8)
 	return I[0]
 
 #lz0 = np.linspace(0,3300,3301)
