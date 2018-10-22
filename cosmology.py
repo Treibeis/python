@@ -76,7 +76,7 @@ def rhom(a, Om = 0.315, h = 0.6774):
 def T_cosmic(z, alpha = -4, beta = 1.27, z0 = 189.6, zi = 1020, T0 = 2.726*1021):
 	def integrand(logt):
 		return alpha/3.0-(2+alpha)/3.0*(1-np.exp(-(ZT(logt)/z0)**beta))
-	I = quad(integrand, np.log10(TZ(zi)/1e9/YR), np.log10(TZ(z)/1e9/YR))[0], epsrel = 1e-6)[0]
+	I = quad(integrand, np.log10(TZ(zi)/1e9/YR), np.log10(TZ(z)/1e9/YR), epsrel = 1e-6)[0]
 	temp = T0*10**I
 	return temp
 
