@@ -21,7 +21,7 @@ def T_b(z, a1=1./119, a2=1./115, T0=2.726):
 	return T0/(a*(1+a/(a1*(1+(a2/a)**1.5))))
 
 def T_dm(z, m = 1., T0=2.726):
-	zc = m*eV / ((3./2)*BOL*T0) - 1
+	zc = m*1e9*eV / ((3./2)*BOL*T0) - 1
 	Tc = T0*(1+zc)
 	return T0*(1+z) * (z>zc) + Tc*((1+z)/(1+zc))**2 * (z<=zc)
 
@@ -119,7 +119,7 @@ def main(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob
 		return [dTdm, dTb, dv]
 	lz = np.linspace(z0, z1, nb)
 	la = 1/(1+lz)
-	y0 = [T_dm(z0), T_b(z0), vbdm_z(z0, v0)]
+	y0 = [T_dm(z0, Mdm), T_b(z0), vbdm_z(z0, v0)]
 	sol = odeint(func, y0, la)
 	d = {}
 	sol = sol.T
@@ -132,14 +132,15 @@ def main(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob
 	return d
 
 if __name__=="__main__":
+	#"""
 	lls = ['-', '--', '-.', ':']
 	llc = ['b', 'g', 'orange', 'r']#['g', 'yellow', 'orange', 'r']
 	lv0 = [1e-10, 30, 60, 90]
 	llb = [r'$v_{\mathrm{bDM},0}=0$', r'$v_{\mathrm{bDM},0}=1\sigma$', r'$v_{\mathrm{bDM},0}=2\sigma$', r'$v_{\mathrm{bDM},0}=3\sigma$']
-	mdm = 0.3
+	mdm = 3e-6
 	sig = -19
 	zmax = 1000
-	z0, z1 = 1000, 9
+	z0, z1 = 1100, 9
 	fig = plt.figure(figsize=(12,6))
 	ax1 = plt.subplot(121)
 	ax2 = plt.subplot(122)
@@ -156,7 +157,7 @@ if __name__=="__main__":
 			ax2.plot(d['lz']+1, vbdm_z(d['lz'], v)/1e5, ls = '--', color=c, label=l+', CDM')
 			ax2.plot(d['lz']+1, d['u']/1e6, ls='-.', color=c, label=r'$0.1u_{\mathrm{th}}$, '+l)
 	ax1.plot(d['lz']+1, T_b(d['lz']), 'k-.', label=r'$T_{\mathrm{b}}$, CDM')
-	ax1.plot(d['lz']+1, T_dm(d['lz']), 'k:', label=r'$T_{\mathrm{DM}}$, CDM')
+	ax1.plot(d['lz']+1, T_dm(d['lz'], mdm), 'k:', label=r'$T_{\mathrm{DM}}$, CDM')
 	ax1.fill_between([16, 19],[up1, up1],[down1, down1],label='EDGEDS',facecolor='gray')
 	ax1.set_xlabel(r'$1+z$')
 	ax1.set_ylabel(r'$T\ [\mathrm{K}]$')
@@ -174,11 +175,10 @@ if __name__=="__main__":
 	ax2.set_xlim(z1+1, zmax)
 	ax2.set_ylim(down2, up2)
 	plt.tight_layout()
-	plt.savefig('T_z.pdf')
+	plt.savefig('T_z_mdm'+str(mdm)+'GeV_logsigma1'+str(sig)+'_.pdf')
 
 	
 	m_dm = 0.3
-	v = 0.2
 	#z0, z1 = 1e3, 9
 	z0, z1 = 500, 9
 	lz = np.linspace(z0,z1,500)
@@ -230,9 +230,9 @@ if __name__=="__main__":
 	plt.tight_layout()
 	plt.savefig('v_mDM.pdf')
 
-	
+	v = 0.2
 	dT1 = Tdot(lz)
-	Q0 = Q_z(lz, v)
+	Q0 = Q_z(lz, v, m_dm)
 	plt.figure()
 	plt.plot(lz+1, -dT1, label='adiabatic cooling')
 	plt.plot(lz+1, -Q0, label=r'scattering cooling, $v_{\mathrm{bDM}}='+str(v)+'\ \mathrm{km\ s^{-1}}$', ls = '-.')
@@ -242,9 +242,14 @@ if __name__=="__main__":
 	plt.yscale('log')
 	plt.legend()
 	plt.tight_layout()
-	plt.savefig('CoolingRate_mdm'+str(m_dm)+'eV_v'+str(v)+'.pdf')
-	
-	"""
+	plt.savefig('CoolingRate_mdm'+str(m_dm)+'GeV_v'+str(v)+'.pdf')
+
+	#"""
+
+	#z0, z1 = 1e3, 9
+	m_dm = mdm
+	z0, z1 = 1000, 9
+	lz = np.linspace(z0,z1,1000)
 	T0 = T_dm(lz, m_dm)
 	T1 = [T_cosmic(x) for x in lz]
 	T2 = T_b(lz)
@@ -261,8 +266,8 @@ if __name__=="__main__":
 	plt.xlim(z0+1, z1+1)
 	plt.legend()
 	plt.tight_layout()
-	plt.savefig('IGM_T_z_mdm'+str(m_dm)+'eV.pdf')
-	"""
+	plt.savefig('IGM_T_z_mdm'+str(m_dm)+'GeV.pdf')
+	#"""
 	#plt.show()
 
 
