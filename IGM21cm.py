@@ -137,14 +137,14 @@ if __name__=="__main__":
 	llc = ['b', 'g', 'orange', 'r']#['g', 'yellow', 'orange', 'r']
 	lv0 = [1e-10, 30, 60, 90]
 	llb = [r'$v_{\mathrm{bDM},0}=0$', r'$v_{\mathrm{bDM},0}=1\sigma$', r'$v_{\mathrm{bDM},0}=2\sigma$', r'$v_{\mathrm{bDM},0}=3\sigma$']
-	mdm = 3e-6
+	mdm = 0.3 #3e-1
 	sig = -19
 	zmax = 1000
 	z0, z1 = 1100, 9
 	fig = plt.figure(figsize=(12,6))
 	ax1 = plt.subplot(121)
 	ax2 = plt.subplot(122)
-	down1, up1 = 0.1, 1e3
+	down1, up1 = 1e-1, 1e3
 	down2, up2 = 1e-2, 1e2
 	ax1.text(z1+2, up1*0.6, r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
 	#ax2.text(z1+15, up2*0.75, r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
