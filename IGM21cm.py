@@ -1,5 +1,5 @@
 from cosmology import *
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, curve_fit
 from scipy.special import erf
 from scipy.integrate import odeint
 from txt import *
@@ -98,10 +98,41 @@ def vcrit(z, Mdm, sigma, frac = 0.1, vi = 0.2, Om = 0.315, Ob = 0.048, OR = 9.54
 		vc = fsolve(f, vin)[0]
 	return vc
 
+def T21_IGM(z, TS, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
+	Tcmb = T0*(1+z)
+	return 26.8 * X * (Ob*h/0.0327)*(Om/0.307)**-0.5*((1+z)/10)**0.5*(TS-Tcmb)/TS
+
+def TS_T21(z, T, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
+	Tcmb = T0*(1+z)
+	A = 26.8 * X * (Ob*h/0.0327)*(Om/0.307)**-0.5*((1+z)/10)**0.5
+	T_T = 1 - T/A
+	return Tcmb/T_T
+
+TS0 = 1420e6*PLANCK/BOL
+
+def T21_pred(v0 = 30., Mdm = 0.3, sigma = 8e-20, z1 = 17.0, z0 = 1000., Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000):
+	d = main(z0, z1, v0, Mdm, sigma, Om, Ob, OR, h, X, a1, a2, T0, nb)
+	#TS = max(d['Tb'][-1], TS0)
+	TS = d['Tb'][-1]
+	return T21_IGM(z1, TS, Om, Ob, h, X, T0), TS
+
+def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10):
+	lm = np.logspace(m1, m2, nbin)
+	ls = np.logspace(s1, s2, nbin)
+	X, Y = np.meshgrid(lm, ls, indexing = 'ij')
+	lT = np.zeros(X.shape)
+	lTb = np.zeros(X.shape)
+	for i in range(nbin):
+		for j in range(nbin):
+			sol = T21_pred(v0, lm[i], ls[j]*1e-20)
+			lT[i,j] = -sol[0]
+			lTb[i,j] = sol[1]
+	return X, Y*1e-20, lT, lTb
+
 def main(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000):
 	xh = 4*X/(1+3*X)
 	def func(y, a):
-		if False:#y[1]<=y[0]:
+		if y[1]<=y[0]:
 			dTdm = -2*y[0]/a
 			dTb = -2*y[1]/a
 		else:
@@ -131,8 +162,90 @@ def main(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob
 	d['u'] = uthf(PROTON, Mdm*GeV_to_mass, d['Tb'], d['Tdm'])
 	return d
 
+lTb = np.array([6.790859696667654, 0.5629660674927683, 0.0019257427490605513])
+lTS = np.array([1.6, 4.437998143755263, 275.0427210371158])*lTb
+
+def ratioT(logT, a, b):
+	return a*logT + b
+
+para = curve_fit(ratioT, np.log(lTb), np.log(lTS))
+print('a = {}, b = {}'.format(para[0][0], para[0][1]))
+
+lx = 10**np.linspace(-3, 1, 100)
+ly = np.exp(ratioT(np.log(lx), para[0][0], para[0][1]))
+plt.plot(lx, ly)
+plt.plot(lTb, lTS, 'o')
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig('TS_Tb.pdf')
+
+#plt.show()
+
+TS_edges = TS_T21(17, -500)
+print('Spin temperature implied by EDGES: {} K'.format(TS_edges))
+TS = T21_pred(1e-10)[1]
+print('Tb with DMBS: {} K'.format(TS))
+print('Tb at z=17: {} K'.format(T_b(17)))
+print('Ratio of TS = {}'.format(TS_edges/TS))
+
+def TS_Tb(T):
+	a, b = para[0][0], para[0][1]
+	return np.exp(ratioT(np.log(T), a, b))
+
 if __name__=="__main__":
-	#"""
+	mode = 1
+	v0 = 1e-4
+	nbin = 50
+	if mode==0:
+		X, Y, Z, Tb = parasp(v0, nbin = nbin)
+		totxt('X_'+str(v0)+'.txt',X,0,0,0)
+		totxt('Y_'+str(v0)+'.txt',Y,0,0,0)
+		totxt('Z_'+str(v0)+'.txt',Z,0,0,0)
+		totxt('Tb_'+str(v0)+'.txt',Tb,0,0,0)
+	else:
+		X = np.array(retxt('X_'+str(v0)+'.txt',nbin,0,0))
+		Y = np.array(retxt('Y_'+str(v0)+'.txt',nbin,0,0))
+		#Z = np.array(retxt('Z_'+str(v0)+'.txt',nbin,0,0))
+		Tb = np.array(retxt('Tb_'+str(v0)+'.txt',nbin,0,0))
+		TS = TS_Tb(Tb)
+		Z = -T21_IGM(17, TS)
+	#print(Z)
+	Tref = TS_T21(17, 10**3.4)
+	print('Maximum -T21: {} mK, with TS = {} K:'.format(np.max(Z), TS_T21(17, -np.max(Z))))
+	print('Ratio of TS: {}'.format(-Tref/TS_T21(17, -np.max(Z))))
+	plt.figure()
+	plt.contourf(X, Y, np.log10(Z), np.linspace(2.05, 3.45), cmap=plt.cm.jet)
+	cb = plt.colorbar()
+	cb.set_label(r'$\log(-T_{21}\ [\mathrm{mK}])$',size=12)
+	#plt.contourf(X, Y, -np.log10(Z), np.linspace(-3.4, -2, 100), cmap=plt.cm.jet)
+	plt.contour(X, Y, np.log10(Z), [np.log10(231)], colors='k')
+	plt.contour(X, Y, np.log10(Z), [np.log10(300)], colors='k')
+	plt.contour(X, Y, np.log10(Z), [np.log10(500)], colors='k')
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.xlabel(r'$m_{\mathrm{DM}}c^{2}\ [\mathrm{Gev}]$')
+	plt.ylabel(r'$\sigma_{1}\ [\mathrm{cm^{2}}]$')
+	plt.tight_layout()
+	plt.savefig('T21map_vbDM'+str(v0)+'.pdf')
+	#plt.show()
+
+	mdm = 0.3
+	sig = -19
+	lv = 10**np.linspace(1, 3, 10)
+	lTb = np.array([T21_pred(x, mdm, 10**sig)[1] for x in lv])
+	lT21 = T21_IGM(17, TS_Tb(lTb))
+	#print(TS_T21(17, lT21[0]), lTb[0])
+	plt.figure()
+	plt.plot(lv, lT21, label=r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
+	plt.plot(lv, [T21_IGM(17, T_b(17)) for x in lv], 'k--', label='CDM')
+	plt.legend()
+	plt.xscale('log')
+	plt.xlabel(r'$v_{\mathrm{bDM},0}\ [\mathrm{km\ s^{-1}}]$')
+	plt.ylabel(r'$T_{21}\ [\mathrm{mK}]$')
+	plt.tight_layout()
+	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_logsigma1'+str(sig)+'_.pdf')
+
+	"""
 	lls = ['-', '--', '-.', ':']
 	llc = ['b', 'g', 'orange', 'r']#['g', 'yellow', 'orange', 'r']
 	lv0 = [1e-10, 30, 60, 90]
@@ -243,9 +356,9 @@ if __name__=="__main__":
 	plt.legend()
 	plt.tight_layout()
 	plt.savefig('CoolingRate_mdm'+str(m_dm)+'GeV_v'+str(v)+'.pdf')
+	"""
 
-	#"""
-
+	"""
 	#z0, z1 = 1e3, 9
 	m_dm = mdm
 	z0, z1 = 1000, 9
@@ -267,7 +380,7 @@ if __name__=="__main__":
 	plt.legend()
 	plt.tight_layout()
 	plt.savefig('IGM_T_z_mdm'+str(m_dm)+'GeV.pdf')
-	#"""
+	"""
 	#plt.show()
 
 
