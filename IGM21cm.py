@@ -4,6 +4,7 @@ from scipy.special import erf
 from scipy.integrate import odeint, ode
 from scipy.interpolate import interp1d
 from txt import *
+import multiprocessing as mp
 
 foralpha = lambda x: ((x-np.sin(x))/(2.*np.pi))**(2./3)
 
@@ -124,17 +125,36 @@ def T21_pred(v0 = 30., Mdm = 0.3, sigma = 8e-20, xa0 = 1.0, z1 = 17.0, z0 = 1000
 	TS = TS_Tb(Tb, z1, xa0)
 	return T21_IGM(z1, TS, Om, Ob, h, X, T0), Tb
 
-def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10, xa0 = 1.0):
+def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10, xa0 = 1.0, ncore=4):
 	lm = np.logspace(m1, m2, nbin)
 	ls = np.logspace(s1, s2, nbin)
 	X, Y = np.meshgrid(lm, ls, indexing = 'ij')
 	lT = np.zeros(X.shape)
 	lTb = np.zeros(X.shape)
-	for i in range(nbin):
-		for j in range(nbin):
+	np_core = int(nbin/ncore)
+	lpr = [[i*np_core, (i+1)*np_core] for i in range(ncore-1)] + [[(ncore-1)*np_core, nbin]]
+	manager = mp.Manager()
+	def sess(pr0, pr1, i):
+		out = []
+		for j in range(pr0, pr1):
 			sol = T21_pred(v0, lm[i], ls[j]*1e-20, xa0)
-			lT[i,j] = -sol[0]
-			lTb[i,j] = sol[1]
+			out.append(sol)
+		output.put((pr0, np.array(out).T))
+	for i in range(nbin):
+		output = manager.Queue()
+		pros = [mp.Process(target=sess, args=(lpr[k][0], lpr[k][1], i)) for k in range(ncore)]
+		for p in pros:
+			p.start()
+		for p in pros:
+			p.join()
+		out = [output.get() for p in pros]
+		out.sort()
+		lT[i] = -np.hstack([x[1][0] for x in out])
+		lTb[i] = np.hstack([x[1][1] for x in out])
+		#for j in range(nbin):
+		#	sol = T21_pred(v0, lm[i], ls[j]*1e-20, xa0)
+		#	lT[i,j] = -sol[0]
+		#	lTb[i,j] = sol[1]
 	return X, Y*1e-20, lT, lTb
 
 def main(z0 = 1000., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000):
@@ -263,9 +283,10 @@ print('Tb and TS in CDM: {} K, {} K'.format(T_b(17), TS_Tb(T_b(17), 17.0, xa0)))
 if __name__=="__main__":
 	mode = 0
 	v0 = 0.1
-	nbin = 50
+	nbin = 8
+	ncore = 4
 	if mode==0:
-		X, Y, Z, Tb = parasp(v0, m1 = -2, m2 = 2, s1 = -1, s2 = 1, nbin = nbin, xa0 = xa0)
+		X, Y, Z, Tb = parasp(v0, m1 = -2, m2 = 2, s1 = -1, s2 = 1, nbin = nbin, xa0 = xa0, ncore = ncore)
 		totxt('X_'+str(v0)+'.txt',X,0,0,0)
 		totxt('Y_'+str(v0)+'.txt',Y,0,0,0)
 		totxt('Z_'+str(v0)+'.txt',Z,0,0,0)
@@ -315,7 +336,7 @@ if __name__=="__main__":
 	plt.tight_layout()
 	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_logsigma1'+str(sig)+'_.pdf')
 
-	#"""
+	"""
 	lls = ['-', '--', '-.', ':']
 	llc = ['b', 'g', 'orange', 'r']#['g', 'yellow', 'orange', 'r']
 	lv0 = [1e-10, 30, 60, 90]
@@ -426,7 +447,7 @@ if __name__=="__main__":
 	plt.legend()
 	plt.tight_layout()
 	plt.savefig('CoolingRate_mdm'+str(m_dm)+'GeV_v'+str(v)+'.pdf')
-	#"""
+	"""
 
 	"""
 	#z0, z1 = 1e3, 9
