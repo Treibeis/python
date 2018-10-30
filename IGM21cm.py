@@ -2,6 +2,7 @@ from cosmology import *
 from scipy.optimize import fsolve, curve_fit
 from scipy.special import erf
 from scipy.integrate import odeint
+from scipy.interpolate import interp1d
 from txt import *
 
 foralpha = lambda x: ((x-np.sin(x))/(2.*np.pi))**(2./3)
@@ -98,9 +99,17 @@ def vcrit(z, Mdm, sigma, frac = 0.1, vi = 0.2, Om = 0.315, Ob = 0.048, OR = 9.54
 		vc = fsolve(f, vin)[0]
 	return vc
 
-def T21_IGM(z, TS, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
+TS0 = 1420e6*PLANCK/BOL
+
+def xalpha(T0, z, xa0, Om = 0.315, Ob = 0.048, h = 0.6774, Tse = 0.402):
+	T = T0*(T0>1) + 1.0*(T0<=1)
+	Sa = np.exp(-2.06*((Ob*h)/0.0327)**(1/3)*(Om/0.307)**(-1/6)*((1+z)/10)**0.5*(T/Tse)**(-2/3))
+	return xa0 * (1+Tse/T)**-1 * Sa
+
+def T21_IGM(z, TS, xa0 = 1.0, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
 	Tcmb = T0*(1+z)
-	return 26.8 * X * (Ob*h/0.0327)*(Om/0.307)**-0.5*((1+z)/10)**0.5*(TS-Tcmb)/TS
+	#xa = xalpha(TS, z, xa0, Om, Ob, h)
+	return 26.8 * X * (Ob*h/0.0327)*(Om/0.307)**-0.5*((1+z)/10)**0.5*(TS-Tcmb)/TS #* xa/(1+xa)
 
 def TS_T21(z, T, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
 	Tcmb = T0*(1+z)
@@ -108,15 +117,14 @@ def TS_T21(z, T, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
 	T_T = 1 - T/A
 	return Tcmb/T_T
 
-TS0 = 1420e6*PLANCK/BOL
-
-def T21_pred(v0 = 30., Mdm = 0.3, sigma = 8e-20, z1 = 17.0, z0 = 1000., Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000):
+def T21_pred(v0 = 30., Mdm = 0.3, sigma = 8e-20, xa0 = 1.0, z1 = 17.0, z0 = 1020., Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 102000):
 	d = main(z0, z1, v0, Mdm, sigma, Om, Ob, OR, h, X, a1, a2, T0, nb)
 	#TS = max(d['Tb'][-1], TS0)
-	TS = d['Tb'][-1]
-	return T21_IGM(z1, TS, Om, Ob, h, X, T0), TS
+	Tb = d['Tb'][-1] #TS_Tb(d['Tb'][-1], z1, xa0, Om, Ob, h, T0)
+	TS = TS_Tb(Tb, z1, xa0)
+	return T21_IGM(z1, TS, Om, Ob, h, X, T0), Tb
 
-def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10):
+def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10, xa0 = 1.0):
 	lm = np.logspace(m1, m2, nbin)
 	ls = np.logspace(s1, s2, nbin)
 	X, Y = np.meshgrid(lm, ls, indexing = 'ij')
@@ -124,7 +132,7 @@ def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10):
 	lTb = np.zeros(X.shape)
 	for i in range(nbin):
 		for j in range(nbin):
-			sol = T21_pred(v0, lm[i], ls[j]*1e-20)
+			sol = T21_pred(v0, lm[i], ls[j]*1e-20, xa0)
 			lT[i,j] = -sol[0]
 			lTb[i,j] = sol[1]
 	return X, Y*1e-20, lT, lTb
@@ -162,19 +170,30 @@ def main(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob
 	d['u'] = uthf(PROTON, Mdm*GeV_to_mass, d['Tb'], d['Tdm'])
 	return d
 
-lTb = np.array([6.790859696667654, 0.5629660674927683, 0.0019257427490605513])
-lTS = np.array([1.6, 4.437998143755263, 275.0427210371158])*lTb
+def TS_Tb(T, z, xa0 = 1.85, Om = 0.315, Ob = 0.048, h = 0.6774, T0 = 2.726, Tse = 0.402):
+	xa = xalpha(T, z, xa0, Om, Ob, h, Tse)
+	Tcmb = T0*(1+z)
+	A = (1+xa)*T/((1+xa)*T-xa*(T-Tcmb))
+	TS = Tcmb*A
+	return TS * (TS>Tse) + Tse * (TS<=Tse)
+	
 
-def ratioT(logT, a, b):
-	return a*logT + b
+#lTb = np.array([20, 6.790859696667654, 0.5629660674927683, 0.0019257427490605513, 1e-3])
+#lTS = np.array([1.0, 1.5, 4.437998143755263, 275.0427210371158, 450.])*lTb
 
-para = curve_fit(ratioT, np.log(lTb), np.log(lTS))
-print('a = {}, b = {}'.format(para[0][0], para[0][1]))
+#def ratioT(logT, a, b):
+#	return a*logT + b
+#ratioT = interp1d(np.log(lTb), np.log(lTS))
+
+#para = curve_fit(ratioT, np.log(lTb), np.log(lTS))
+#print('a = {}, b = {}'.format(para[0][0], para[0][1]))
+
+xa0 = 1.85
 
 lx = 10**np.linspace(-3, 1, 100)
-ly = np.exp(ratioT(np.log(lx), para[0][0], para[0][1]))
+ly = TS_Tb(lx, 17.0, xa0)#, para[0][0], para[0][1]))
 plt.plot(lx, ly)
-plt.plot(lTb, lTS, 'o')
+#plt.plot(lTb[1:], lTS[1:], 'o')
 plt.xscale('log')
 plt.yscale('log')
 plt.savefig('TS_Tb.pdf')
@@ -183,21 +202,17 @@ plt.savefig('TS_Tb.pdf')
 
 TS_edges = TS_T21(17, -500)
 print('Spin temperature implied by EDGES: {} K'.format(TS_edges))
-TS = T21_pred(1e-10)[1]
-print('Tb with DMBS: {} K'.format(TS))
-print('Tb at z=17: {} K'.format(T_b(17)))
-print('Ratio of TS = {}'.format(TS_edges/TS))
-
-def TS_Tb(T):
-	a, b = para[0][0], para[0][1]
-	return np.exp(ratioT(np.log(T), a, b))
+Tb = T21_pred(1e-10)[1]
+print('Tb and TS with DMBS: {} K, {} K'.format(Tb, TS_Tb(Tb, 17.0, xa0)))
+print('Tb and TS in CDM: {} K, {} K'.format(T_b(17), TS_Tb(T_b(17), 17.0, xa0)))
+#print('Ratio of TS = {}'.format(TS_edges/TS))
 
 if __name__=="__main__":
-	mode = 1
-	v0 = 1e-4
+	mode = 0
+	v0 = 0.1
 	nbin = 50
 	if mode==0:
-		X, Y, Z, Tb = parasp(v0, nbin = nbin)
+		X, Y, Z, Tb = parasp(v0, nbin = nbin, xa0 = xa0)
 		totxt('X_'+str(v0)+'.txt',X,0,0,0)
 		totxt('Y_'+str(v0)+'.txt',Y,0,0,0)
 		totxt('Z_'+str(v0)+'.txt',Z,0,0,0)
@@ -207,16 +222,18 @@ if __name__=="__main__":
 		Y = np.array(retxt('Y_'+str(v0)+'.txt',nbin,0,0))
 		#Z = np.array(retxt('Z_'+str(v0)+'.txt',nbin,0,0))
 		Tb = np.array(retxt('Tb_'+str(v0)+'.txt',nbin,0,0))
-		TS = TS_Tb(Tb)
+		TS = TS_Tb(Tb, 17.0, xa0)
 		Z = -T21_IGM(17, TS)
 	#print(Z)
-	Tref = TS_T21(17, 10**3.4)
+	Tref = TS_T21(17, -10**3.5)
+	print('Minimum of Tb: {} K'.format(np.min(Tb)))
+	print('Possible minimum of TS: {} K'.format(Tref))
 	print('Maximum -T21: {} mK, with TS = {} K:'.format(np.max(Z), TS_T21(17, -np.max(Z))))
-	print('Ratio of TS: {}'.format(-Tref/TS_T21(17, -np.max(Z))))
+	print('Ratio of TS: {}'.format(Tref/TS_T21(17, -np.max(Z))))
 	plt.figure()
-	plt.contourf(X, Y, np.log10(Z), np.linspace(2.05, 3.45), cmap=plt.cm.jet)
+	plt.contourf(X, Y, -np.log10(Z), 100, cmap=plt.cm.jet)
 	cb = plt.colorbar()
-	cb.set_label(r'$\log(-T_{21}\ [\mathrm{mK}])$',size=12)
+	cb.set_label(r'$-\log(-T_{21}\ [\mathrm{mK}])$',size=12)
 	#plt.contourf(X, Y, -np.log10(Z), np.linspace(-3.4, -2, 100), cmap=plt.cm.jet)
 	plt.contour(X, Y, np.log10(Z), [np.log10(231)], colors='k')
 	plt.contour(X, Y, np.log10(Z), [np.log10(300)], colors='k')
@@ -231,9 +248,9 @@ if __name__=="__main__":
 
 	mdm = 0.3
 	sig = -19
-	lv = 10**np.linspace(1, 3, 10)
+	lv = 10**np.linspace(1, 3, 20)
 	lTb = np.array([T21_pred(x, mdm, 10**sig)[1] for x in lv])
-	lT21 = T21_IGM(17, TS_Tb(lTb))
+	lT21 = T21_IGM(17, TS_Tb(lTb, 17.0, xa0))
 	#print(TS_T21(17, lT21[0]), lTb[0])
 	plt.figure()
 	plt.plot(lv, lT21, label=r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
