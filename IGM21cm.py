@@ -1,7 +1,7 @@
 from cosmology import *
 from scipy.optimize import fsolve, curve_fit
 from scipy.special import erf
-from scipy.integrate import odeint
+from scipy.integrate import odeint, ode
 from scipy.interpolate import interp1d
 from txt import *
 
@@ -106,7 +106,7 @@ def xalpha(T0, z, xa0, Om = 0.315, Ob = 0.048, h = 0.6774, Tse = 0.402):
 	Sa = np.exp(-2.06*((Ob*h)/0.0327)**(1/3)*(Om/0.307)**(-1/6)*((1+z)/10)**0.5*(T/Tse)**(-2/3))
 	return xa0 * (1+Tse/T)**-1 * Sa
 
-def T21_IGM(z, TS, xa0 = 1.0, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
+def T21_IGM(z, TS, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
 	Tcmb = T0*(1+z)
 	#xa = xalpha(TS, z, xa0, Om, Ob, h)
 	return 26.8 * X * (Ob*h/0.0327)*(Om/0.307)**-0.5*((1+z)/10)**0.5*(TS-Tcmb)/TS #* xa/(1+xa)
@@ -117,7 +117,7 @@ def TS_T21(z, T, Om = 0.315, Ob = 0.048, h = 0.6774, X = 0.76, T0=2.726):
 	T_T = 1 - T/A
 	return Tcmb/T_T
 
-def T21_pred(v0 = 30., Mdm = 0.3, sigma = 8e-20, xa0 = 1.0, z1 = 17.0, z0 = 1020., Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 102000):
+def T21_pred(v0 = 30., Mdm = 0.3, sigma = 8e-20, xa0 = 1.0, z1 = 17.0, z0 = 1000., Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000):
 	d = main(z0, z1, v0, Mdm, sigma, Om, Ob, OR, h, X, a1, a2, T0, nb)
 	#TS = max(d['Tb'][-1], TS0)
 	Tb = d['Tb'][-1] #TS_Tb(d['Tb'][-1], z1, xa0, Om, Ob, h, T0)
@@ -137,7 +137,7 @@ def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10, xa0 = 1.0):
 			lTb[i,j] = sol[1]
 	return X, Y*1e-20, lT, lTb
 
-def main(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000):
+def main(z0 = 1000., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000):
 	xh = 4*X/(1+3*X)
 	def func(y, a):
 		if y[1]<=y[0]:
@@ -156,10 +156,15 @@ def main(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob
 		DHe = drag(rhom(a, Om, h), y[2], y[1], y[0], 4*PROTON, Mdm*GeV_to_mass, sigma)	
 		dv = -y[2]/a - (xh*DH + (1-xh)*DHe)/(a*H(a, Om, h, OR))
 		return [dTdm, dTb, dv]
-	lz = np.linspace(z0, z1, nb)
-	la = 1/(1+lz)
+	ai = 1/(1+z0)
+	af = 1/(1+z1)
+	#lz = np.linspace(z0, z1, nb)
+	la = np.logspace(np.log10(ai), np.log10(af), nb)
+	#la = 1/(lz+1)
+	#print(la)
+	lz = 1/la - 1
 	y0 = [T_dm(z0, Mdm), T_b(z0), vbdm_z(z0, v0)]
-	sol = odeint(func, y0, la)
+	sol = odeint(func, y0, la)#, mxstep = 1000, hmin = 1e-30)
 	d = {}
 	sol = sol.T
 	d['lz'] = lz
@@ -168,6 +173,54 @@ def main(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob
 	d['Tdm'] = sol[0]
 	d['v'] = sol[2]
 	d['u'] = uthf(PROTON, Mdm*GeV_to_mass, d['Tb'], d['Tdm'])
+	return d
+
+def main_(z0 = 500., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 1000, tol = 1e-20):
+	xh = 4*X/(1+3*X)
+	def func(y, t):
+		Tdm, Tb, v = max(y[0], tol), max(y[1], tol), max(y[2], tol)
+		a = 1/(1+ZT(np.log10(t/1e9/YR)))
+		if y[1]<=Tdm:
+			dTdm = -2*Tdm/a * (a*H(a, Om, h, OR))
+			dTb = -2*Tb/a * (a*H(a, Om, h, OR))
+		else:
+			rhob = Ob/Om * rhom(a, Om, h)
+			QH = Q_IDMB(rhob, v, Tdm, Tb, Mdm*GeV_to_mass, PROTON, sigma)*xh
+			QHe = Q_IDMB(rhob, v, Tdm, Tb, Mdm*GeV_to_mass, 4*PROTON, sigma)*(1-xh)
+			dTdm = -2*Tdm/a *(a*H(a, Om, h, OR)) + (QH+QHe)#/ (a*H(a, Om, h, OR))
+			rhodm = (Om-Ob)/Om * rhom(a, Om, h)
+			QH = Q_IDMB(rhodm, v, Tb, Tdm, PROTON, Mdm*GeV_to_mass, sigma)*xh
+			QHe = Q_IDMB(rhodm, v, Tb, Tdm, 4*PROTON, Mdm*GeV_to_mass, sigma)*(1-xh)
+			dTb = -2*Tb/a *(a*H(a, Om, h, OR)) + (GammaC(1/a-1, Om, Ob, OR, h, X, a1, a2, T0)*(T0/a-Tb) + (QH+QHe))#/ (a*H(a, Om, h, OR))
+		DH = drag(rhom(a, Om, h), v, Tb, Tdm, PROTON, Mdm*GeV_to_mass, sigma)
+		DHe = drag(rhom(a, Om, h), v, Tb, Tdm, 4*PROTON, Mdm*GeV_to_mass, sigma)	
+		dv = -v/a *(a*H(a, Om, h, OR)) - (xh*DH + (1-xh)*DHe)#/(a*H(a, Om, h, OR))
+		return [dTdm, dTb, dv]
+	lz = np.linspace(z0, z1, nb)
+	la = 1/(1+lz)
+	lt = np.array([TZ(x) for x in lz])
+	y0 = [T_dm(z0, Mdm), T_b(z0), vbdm_z(z0, v0)]
+	d = {}
+	d['la'] = la
+	d['lz'] = lz
+	d['Tb'] = np.zeros(nb)
+	d['Tdm'] = np.zeros(nb)
+	d['v'] = np.zeros(nb)
+	sol = odeint(func, y0, lt)#, rtol=1e-2)
+	sol = sol.T
+	d['Tdm'] = sol[0]
+	d['Tb'] = sol[1]
+	d['v'] = sol[2]
+	#r = ode(func).set_integrator('dopri5', rtol = 1e-2)
+	#r.set_initial_value(y0, TZ(z0))
+	#d['Tdm'][0], d['Tb'][0], d['v'][0] = y0[0], y0[1], y0[2]
+	#count = 1
+	#while r.successful() and count<nb:
+	#	r.integrate(la[count])
+	#	d['Tdm'][count] = r.y[0]
+	#	d['Tb'][count] = r.y[1]
+	#	d['v'][count] = r.y[2]
+	#d['u'] = uthf(PROTON, Mdm*GeV_to_mass, d['Tb'], d['Tdm'])
 	return d
 
 def TS_Tb(T, z, xa0 = 1.85, Om = 0.315, Ob = 0.048, h = 0.6774, T0 = 2.726, Tse = 0.402):
@@ -188,7 +241,7 @@ def TS_Tb(T, z, xa0 = 1.85, Om = 0.315, Ob = 0.048, h = 0.6774, T0 = 2.726, Tse 
 #para = curve_fit(ratioT, np.log(lTb), np.log(lTS))
 #print('a = {}, b = {}'.format(para[0][0], para[0][1]))
 
-xa0 = 1.85
+xa0 = 1.65
 
 lx = 10**np.linspace(-3, 1, 100)
 ly = TS_Tb(lx, 17.0, xa0)#, para[0][0], para[0][1]))
@@ -212,7 +265,7 @@ if __name__=="__main__":
 	v0 = 0.1
 	nbin = 50
 	if mode==0:
-		X, Y, Z, Tb = parasp(v0, nbin = nbin, xa0 = xa0)
+		X, Y, Z, Tb = parasp(v0, m1 = -2, m2 = 2, s1 = -1, s2 = 1, nbin = nbin, xa0 = xa0)
 		totxt('X_'+str(v0)+'.txt',X,0,0,0)
 		totxt('Y_'+str(v0)+'.txt',Y,0,0,0)
 		totxt('Z_'+str(v0)+'.txt',Z,0,0,0)
@@ -246,7 +299,7 @@ if __name__=="__main__":
 	plt.savefig('T21map_vbDM'+str(v0)+'.pdf')
 	#plt.show()
 
-	mdm = 0.3
+	mdm = 0.03
 	sig = -19
 	lv = 10**np.linspace(1, 3, 20)
 	lTb = np.array([T21_pred(x, mdm, 10**sig)[1] for x in lv])
@@ -262,12 +315,12 @@ if __name__=="__main__":
 	plt.tight_layout()
 	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_logsigma1'+str(sig)+'_.pdf')
 
-	"""
+	#"""
 	lls = ['-', '--', '-.', ':']
 	llc = ['b', 'g', 'orange', 'r']#['g', 'yellow', 'orange', 'r']
 	lv0 = [1e-10, 30, 60, 90]
 	llb = [r'$v_{\mathrm{bDM},0}=0$', r'$v_{\mathrm{bDM},0}=1\sigma$', r'$v_{\mathrm{bDM},0}=2\sigma$', r'$v_{\mathrm{bDM},0}=3\sigma$']
-	mdm = 0.3 #3e-1
+	mdm = 0.03 #3e-1
 	sig = -19
 	zmax = 1000
 	z0, z1 = 1100, 9
@@ -373,7 +426,7 @@ if __name__=="__main__":
 	plt.legend()
 	plt.tight_layout()
 	plt.savefig('CoolingRate_mdm'+str(m_dm)+'GeV_v'+str(v)+'.pdf')
-	"""
+	#"""
 
 	"""
 	#z0, z1 = 1e3, 9
