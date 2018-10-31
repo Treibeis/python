@@ -331,14 +331,18 @@ if __name__=="__main__":
 	"""
 	mdm = 0.3
 	sig = 8e-20 #-19
-	lv = 10**np.linspace(0, 4, 100)
+	lv = 10**np.linspace(0, 5, 1000)
 	lTb = np.array([T21_pred(x, mdm, sig)[1] for x in lv])
 	lT21 = T21_IGM(17, TS_Tb(lTb, 17.0, xa0))
+	totxt('T21_v.txt',[lv, lT21],0,0,0)
 	#print(TS_T21(17, lT21[0]), lTb[0])
 	plt.figure()
 	plt.plot(lv, lT21, label=r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}='+str(sig)+r'\ \mathrm{cm^{2}}$')
-	plt.plot(lv, [T21_IGM(17, T_b(17)) for x in lv], 'k--', label='CDM')
-	plt.legend()
+	plt.plot(lv, [T21_IGM(17, T_b(17)) for x in lv], 'k--', label='CDM (full coupled)')
+	plt.plot(lv, [T21_IGM(17, TS_Tb(T_b(17), 17.0, xa0)) for x in lv], 'k:', label=r'CDM ($x_{a,0}=1.73$)')
+	plt.legend(loc=4)
+	plt.ylim(-550, 0)
+	plt.xlim(np.min(lv), np.max(lv))
 	plt.xscale('log')
 	plt.xlabel(r'$v_{\mathrm{bDM},0}\ [\mathrm{km\ s^{-1}}]$')
 	plt.ylabel(r'$T_{21}\ [\mathrm{mK}]$')
