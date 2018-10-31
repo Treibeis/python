@@ -133,10 +133,11 @@ def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10, xa0 = 1.0, nco
 	lTb = np.zeros(X.shape)
 	np_core = int(nbin/ncore)
 	lpr = [[i*np_core, (i+1)*np_core] for i in range(ncore-1)] + [[(ncore-1)*np_core, nbin]]
+	print(lpr)
 	manager = mp.Manager()
-	def sess(pr0, pr1, i):
+	def sess(pr0, pr1, j):
 		out = []
-		for j in range(pr0, pr1):
+		for i in range(pr0, pr1):
 			sol = T21_pred(v0, lm[i], ls[j]*1e-20, xa0)
 			out.append(sol)
 		output.put((pr0, np.array(out).T))
@@ -149,18 +150,18 @@ def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = 10, xa0 = 1.0, nco
 			p.join()
 		out = [output.get() for p in pros]
 		out.sort()
-		lT[i] = -np.hstack([x[1][0] for x in out])
-		lTb[i] = np.hstack([x[1][1] for x in out])
+		lT[:,i] = -np.hstack([x[1][0] for x in out])
+		lTb[:,i] = np.hstack([x[1][1] for x in out])
 		#for j in range(nbin):
 		#	sol = T21_pred(v0, lm[i], ls[j]*1e-20, xa0)
 		#	lT[i,j] = -sol[0]
 		#	lTb[i,j] = sol[1]
 	return X, Y*1e-20, lT, lTb
 
-def main(z0 = 1000., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000):
+def main(z0 = 1000., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000, Tmin = 0.1, vmin = 1e-10):
 	xh = 4*X/(1+3*X)
 	def func(y, a):
-		if y[1]<=y[0]:
+		if y[1]<Tmin: #y[1]<=y[0]:
 			dTdm = -2*y[0]/a
 			dTb = -2*y[1]/a
 		else:
@@ -172,9 +173,12 @@ def main(z0 = 1000., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, O
 			QH = Q_IDMB(rhodm, y[2], y[1], y[0], PROTON, Mdm*GeV_to_mass, sigma)*xh
 			QHe = Q_IDMB(rhodm, y[2], y[1], y[0], 4*PROTON, Mdm*GeV_to_mass, sigma)*(1-xh)
 			dTb = -2*y[1]/a + (GammaC(1/a-1, Om, Ob, OR, h, X, a1, a2, T0)*(T0/a-y[1]) + (QH+QHe))/ (a*H(a, Om, h, OR))
-		DH = drag(rhom(a, Om, h), y[2], y[1], y[0], PROTON, Mdm*GeV_to_mass, sigma)
-		DHe = drag(rhom(a, Om, h), y[2], y[1], y[0], 4*PROTON, Mdm*GeV_to_mass, sigma)	
-		dv = -y[2]/a - (xh*DH + (1-xh)*DHe)/(a*H(a, Om, h, OR))
+		if y[2]<vmin:
+			dv = -y[2]/a
+		else:
+			DH = drag(rhom(a, Om, h), y[2], y[1], y[0], PROTON, Mdm*GeV_to_mass, sigma)
+			DHe = drag(rhom(a, Om, h), y[2], y[1], y[0], 4*PROTON, Mdm*GeV_to_mass, sigma)	
+			dv = -y[2]/a - (xh*DH + (1-xh)*DHe)/(a*H(a, Om, h, OR))
 		return [dTdm, dTb, dv]
 	ai = 1/(1+z0)
 	af = 1/(1+z1)
@@ -261,7 +265,7 @@ def TS_Tb(T, z, xa0 = 1.85, Om = 0.315, Ob = 0.048, h = 0.6774, T0 = 2.726, Tse 
 #para = curve_fit(ratioT, np.log(lTb), np.log(lTS))
 #print('a = {}, b = {}'.format(para[0][0], para[0][1]))
 
-xa0 = 1.65
+xa0 = 1.73
 
 lx = 10**np.linspace(-3, 1, 100)
 ly = TS_Tb(lx, 17.0, xa0)#, para[0][0], para[0][1]))
@@ -278,15 +282,17 @@ print('Spin temperature implied by EDGES: {} K'.format(TS_edges))
 Tb = T21_pred(1e-10)[1]
 print('Tb and TS with DMBS: {} K, {} K'.format(Tb, TS_Tb(Tb, 17.0, xa0)))
 print('Tb and TS in CDM: {} K, {} K'.format(T_b(17), TS_Tb(T_b(17), 17.0, xa0)))
+T210 = T21_IGM(17, TS_Tb(T_b(17), 17.0, xa0))
+print('T21 in CDM : {} mK'.format(T210))
 #print('Ratio of TS = {}'.format(TS_edges/TS))
 
 if __name__=="__main__":
 	mode = 0
 	v0 = 0.1
-	nbin = 8
+	nbin = 48
 	ncore = 4
 	if mode==0:
-		X, Y, Z, Tb = parasp(v0, m1 = -2, m2 = 2, s1 = -1, s2 = 1, nbin = nbin, xa0 = xa0, ncore = ncore)
+		X, Y, Z, Tb = parasp(v0, m1 = -4, m2 = 2, s1 = -1, s2 = 2, nbin = nbin, xa0 = xa0, ncore = ncore)
 		totxt('X_'+str(v0)+'.txt',X,0,0,0)
 		totxt('Y_'+str(v0)+'.txt',Y,0,0,0)
 		totxt('Z_'+str(v0)+'.txt',Z,0,0,0)
@@ -312,6 +318,8 @@ if __name__=="__main__":
 	plt.contour(X, Y, np.log10(Z), [np.log10(231)], colors='k')
 	plt.contour(X, Y, np.log10(Z), [np.log10(300)], colors='k')
 	plt.contour(X, Y, np.log10(Z), [np.log10(500)], colors='k')
+	plt.contour(X, Y, np.log10(Z), [np.log10(-T210)], colors='k', linestyles='--')
+	plt.plot([0.3], [8e-20], '*', color='purple')
 	plt.xscale('log')
 	plt.yscale('log')
 	plt.xlabel(r'$m_{\mathrm{DM}}c^{2}\ [\mathrm{Gev}]$')
@@ -320,21 +328,22 @@ if __name__=="__main__":
 	plt.savefig('T21map_vbDM'+str(v0)+'.pdf')
 	#plt.show()
 
-	mdm = 0.03
-	sig = -19
-	lv = 10**np.linspace(1, 3, 20)
-	lTb = np.array([T21_pred(x, mdm, 10**sig)[1] for x in lv])
+	#"""
+	mdm = 0.3
+	sig = 8e-20 #-19
+	lv = 10**np.linspace(-2, 3, 20)
+	lTb = np.array([T21_pred(x, mdm, sig)[1] for x in lv])
 	lT21 = T21_IGM(17, TS_Tb(lTb, 17.0, xa0))
 	#print(TS_T21(17, lT21[0]), lTb[0])
 	plt.figure()
-	plt.plot(lv, lT21, label=r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
+	plt.plot(lv, lT21, label=r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}='+str(sig)+r'\ \mathrm{cm^{2}}$')
 	plt.plot(lv, [T21_IGM(17, T_b(17)) for x in lv], 'k--', label='CDM')
 	plt.legend()
 	plt.xscale('log')
 	plt.xlabel(r'$v_{\mathrm{bDM},0}\ [\mathrm{km\ s^{-1}}]$')
 	plt.ylabel(r'$T_{21}\ [\mathrm{mK}]$')
 	plt.tight_layout()
-	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_logsigma1'+str(sig)+'_.pdf')
+	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_sigma_1'+str(sig)+'_.pdf')
 
 	"""
 	lls = ['-', '--', '-.', ':']
