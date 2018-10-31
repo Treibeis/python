@@ -287,8 +287,8 @@ print('T21 in CDM : {} mK'.format(T210))
 #print('Ratio of TS = {}'.format(TS_edges/TS))
 
 if __name__=="__main__":
-	mode = 0
-	v0 = 0.1
+	mode = 1
+	v0 = 1e-10
 	nbin = 48
 	ncore = 4
 	if mode==0:
@@ -328,10 +328,10 @@ if __name__=="__main__":
 	plt.savefig('T21map_vbDM'+str(v0)+'.pdf')
 	#plt.show()
 
-	#"""
+	"""
 	mdm = 0.3
 	sig = 8e-20 #-19
-	lv = 10**np.linspace(-2, 3, 20)
+	lv = 10**np.linspace(0, 4, 100)
 	lTb = np.array([T21_pred(x, mdm, sig)[1] for x in lv])
 	lT21 = T21_IGM(17, TS_Tb(lTb, 17.0, xa0))
 	#print(TS_T21(17, lT21[0]), lTb[0])
@@ -344,25 +344,26 @@ if __name__=="__main__":
 	plt.ylabel(r'$T_{21}\ [\mathrm{mK}]$')
 	plt.tight_layout()
 	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_sigma_1'+str(sig)+'_.pdf')
-
+	"""
+	
 	"""
 	lls = ['-', '--', '-.', ':']
 	llc = ['b', 'g', 'orange', 'r']#['g', 'yellow', 'orange', 'r']
 	lv0 = [1e-10, 30, 60, 90]
 	llb = [r'$v_{\mathrm{bDM},0}=0$', r'$v_{\mathrm{bDM},0}=1\sigma$', r'$v_{\mathrm{bDM},0}=2\sigma$', r'$v_{\mathrm{bDM},0}=3\sigma$']
-	mdm = 0.03 #3e-1
+	mdm = 0.003 #3e-1
 	sig = -19
 	zmax = 1000
 	z0, z1 = 1100, 9
 	fig = plt.figure(figsize=(12,6))
 	ax1 = plt.subplot(121)
 	ax2 = plt.subplot(122)
-	down1, up1 = 1e-1, 1e3
+	down1, up1 = 1e-3, 1e3
 	down2, up2 = 1e-2, 1e2
-	ax1.text(z1+2, up1*0.6, r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
+	ax1.text(z1+2, up1*0.4, r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
 	#ax2.text(z1+15, up2*0.75, r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
 	for v, c, l, ls in zip(lv0, llc, llb, lls):
-		d = main(z0, z1, v0 = v, Mdm=mdm, sigma=10**sig)
+		d = main(z0, z1, v0 = v, Mdm=mdm, sigma=10**sig, Tmin = 1e-5)
 		ax1.plot(d['lz']+1, d['Tb'], color=c, label=r'$T_{\mathrm{b}}$, '+l)
 		ax1.plot(d['lz']+1, d['Tdm'], color=c, label=r'$T_{\mathrm{DM}}$, '+l, ls='--')
 		if c is not 'b':
@@ -370,7 +371,7 @@ if __name__=="__main__":
 			ax2.plot(d['lz']+1, vbdm_z(d['lz'], v)/1e5, ls = '--', color=c, label=l+', CDM')
 			ax2.plot(d['lz']+1, d['u']/1e6, ls='-.', color=c, label=r'$0.1u_{\mathrm{th}}$, '+l)
 	ax1.plot(d['lz']+1, T_b(d['lz']), 'k-.', label=r'$T_{\mathrm{b}}$, CDM')
-	ax1.plot(d['lz']+1, T_dm(d['lz'], mdm), 'k:', label=r'$T_{\mathrm{DM}}$, CDM')
+	#ax1.plot(d['lz']+1, T_dm(d['lz'], mdm), 'k:', label=r'$T_{\mathrm{DM}}$, CDM')
 	ax1.fill_between([16, 19],[up1, up1],[down1, down1],label='EDGEDS',facecolor='gray')
 	ax1.set_xlabel(r'$1+z$')
 	ax1.set_ylabel(r'$T\ [\mathrm{K}]$')
