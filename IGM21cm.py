@@ -328,13 +328,18 @@ if __name__=="__main__":
 	plt.savefig('T21map_vbDM'+str(v0)+'.pdf')
 	#plt.show()
 
-	"""
+	#"""
 	mdm = 0.3
 	sig = 8e-20 #-19
-	lv = 10**np.linspace(0, 5, 1000)
-	lTb = np.array([T21_pred(x, mdm, sig)[1] for x in lv])
-	lT21 = T21_IGM(17, TS_Tb(lTb, 17.0, xa0))
-	totxt('T21_v.txt',[lv, lT21],0,0,0)
+	if mode==0:
+		lv = 10**np.linspace(0, 5, 1000)
+		lTb = np.array([T21_pred(x, mdm, sig)[1] for x in lv])
+		lT21 = T21_IGM(17, TS_Tb(lTb, 17.0, xa0))
+		totxt('T21_v.txt',[lv, lT21],0,0,0)
+	else:
+		lf = np.array(retxt('T21_v.txt',2,0,0))
+		lv = lf[0]
+		lT21 = lf[1]*(lf[1]>-500) + -500*(lf[1]<=-500)
 	#print(TS_T21(17, lT21[0]), lTb[0])
 	plt.figure()
 	plt.plot(lv, lT21, label=r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}='+str(sig)+r'\ \mathrm{cm^{2}}$')
@@ -348,7 +353,7 @@ if __name__=="__main__":
 	plt.ylabel(r'$T_{21}\ [\mathrm{mK}]$')
 	plt.tight_layout()
 	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_sigma_1'+str(sig)+'_.pdf')
-	"""
+	#"""
 	
 	"""
 	lls = ['-', '--', '-.', ':']
