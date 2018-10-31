@@ -338,7 +338,7 @@ if __name__=="__main__":
 	#print(TS_T21(17, lT21[0]), lTb[0])
 	plt.figure()
 	plt.plot(lv, lT21, label=r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}='+str(sig)+r'\ \mathrm{cm^{2}}$')
-	plt.plot(lv, [T21_IGM(17, T_b(17)) for x in lv], 'k--', label='CDM (full coupled)')
+	plt.plot(lv, [T21_IGM(17, T_b(17)) for x in lv], 'k--', label='CDM (fully coupled)')
 	plt.plot(lv, [T21_IGM(17, TS_Tb(T_b(17), 17.0, xa0)) for x in lv], 'k:', label=r'CDM ($x_{a,0}=1.73$)')
 	plt.legend(loc=4)
 	plt.ylim(-550, 0)
