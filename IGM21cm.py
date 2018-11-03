@@ -286,11 +286,73 @@ T210 = T21_IGM(17, TS_Tb(T_b(17), 17.0, xa0))
 print('T21 in CDM : {} mK'.format(T210))
 #print('Ratio of TS = {}'.format(TS_edges/TS))
 
+def vdis(v, sigma = 30):
+	return v**2*np.exp(-3*(v/sigma)**2/2)
+
+def stack(lv, lZ):
+	Z = np.zeros(lZ[0].shape)
+	nx, ny = lZ[0].shape[0], lZ[0].shape[1]
+	lw = vdis(lv)
+	norm = np.trapz(lw, lv)
+	for i in range(nx):
+		for j in range(ny):
+			lT21 = np.array([x[i, j] for x in lZ])
+			Z[i, j] = np.trapz(lT21*lw, lv)/norm
+	return Z
+	
+
 if __name__=="__main__":
 	mode = 1
-	v0 = 1e-10
+	v0 = 0.1
 	nbin = 48
 	ncore = 4
+	"""
+	lf = ['1e-10', '10.0', '21.0', '30.0', '40.0', '50.0', '60.0', '70.0', '80.0', '90.0']
+	lZ = [-T21_IGM(17.0, TS_Tb(np.array(retxt('Tb_'+v0+'.txt',nbin,0,0)),17.0, xa0)) for v0 in lf]
+	lv = np.array([0, 10, 21, 30, 40, 50, 60, 70, 80, 90])
+	print(lv)
+	Z = stack(lv, lZ)
+	X = np.array(retxt('X_'+lf[0]+'.txt',nbin,0,0))
+	Y = np.array(retxt('Y_'+lf[0]+'.txt',nbin,0,0))
+	plt.figure()
+	ctf = plt.contourf(X, Y, -np.log10(Z), 1000, cmap=plt.cm.jet)
+	for c in ctf.collections:
+		c.set_edgecolor('face')
+	cb = plt.colorbar()
+	cb.set_label(r'$-\log(-T_{21}\ [\mathrm{mK}])$',size=12)
+	#plt.contourf(X, Y, -np.log10(Z), np.linspace(-3.4, -2, 100), cmap=plt.cm.jet)
+	plt.contour(X, Y, np.log10(Z), [np.log10(231)], colors='k')
+	plt.contour(X, Y, np.log10(Z), [np.log10(300)], colors='k')
+	plt.contour(X, Y, np.log10(Z), [np.log10(500)], colors='k')
+	plt.contour(X, Y, np.log10(Z), [np.log10(-T210)], colors='k', linestyles='--')
+	plt.plot([0.3], [8e-20], '*', color='purple')
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.xlabel(r'$m_{\mathrm{DM}}c^{2}\ [\mathrm{Gev}]$')
+	plt.ylabel(r'$\sigma_{1}\ [\mathrm{cm^{2}}]$')
+	plt.tight_layout()
+	plt.savefig('T21map.pdf')
+
+	Z0 = -T21_IGM(17.0, TS_Tb(np.array(retxt('Tb_'+lf[0]+'.txt',nbin,0,0)),17.0, xa0))
+	plt.figure()
+	ctf = plt.contourf(X, Y, Z/Z0, 1000, cmap=plt.cm.Blues)
+	for c in ctf.collections:
+		c.set_edgecolor('face')
+	cb = plt.colorbar()
+	cb.set_label(r'$\langle T_{21}\rangle/T_{21}(v_{\mathrm{bDM,0}}=0)$',size=12)
+	#plt.contourf(X, Y, -np.log10(Z), np.linspace(-3.4, -2, 100), cmap=plt.cm.jet)
+	#plt.contour(X, Y, np.log10(Z), [np.log10(231)], colors='k')
+	#plt.contour(X, Y, np.log10(Z), [np.log10(300)], colors='k')
+	#plt.contour(X, Y, np.log10(Z), [np.log10(500)], colors='k')
+	#plt.contour(X, Y, np.log10(Z), [np.log10(-T210)], colors='k', linestyles='--')
+	plt.plot([0.3], [8e-20], '*', color='purple')
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.xlabel(r'$m_{\mathrm{DM}}c^{2}\ [\mathrm{Gev}]$')
+	plt.ylabel(r'$\sigma_{1}\ [\mathrm{cm^{2}}]$')
+	plt.tight_layout()
+	plt.savefig('T21Ratio.pdf')
+	"""
 	if mode==0:
 		X, Y, Z, Tb = parasp(v0, m1 = -4, m2 = 2, s1 = -1, s2 = 2, nbin = nbin, xa0 = xa0, ncore = ncore)
 		totxt('X_'+str(v0)+'.txt',X,0,0,0)
@@ -311,7 +373,9 @@ if __name__=="__main__":
 	print('Maximum -T21: {} mK, with TS = {} K:'.format(np.max(Z), TS_T21(17, -np.max(Z))))
 	print('Ratio of TS: {}'.format(Tref/TS_T21(17, -np.max(Z))))
 	plt.figure()
-	plt.contourf(X, Y, -np.log10(Z), 100, cmap=plt.cm.jet)
+	ctf = plt.contourf(X, Y, -np.log10(Z), 100, cmap=plt.cm.jet)
+	for c in ctf.collections:
+		c.set_edgecolor('face')
 	cb = plt.colorbar()
 	cb.set_label(r'$-\log(-T_{21}\ [\mathrm{mK}])$',size=12)
 	#plt.contourf(X, Y, -np.log10(Z), np.linspace(-3.4, -2, 100), cmap=plt.cm.jet)
@@ -353,9 +417,10 @@ if __name__=="__main__":
 	plt.ylabel(r'$T_{21}\ [\mathrm{mK}]$')
 	plt.tight_layout()
 	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_sigma_1'+str(sig)+'_.pdf')
+	T21 = np.trapz(vdis(lv)*lT21, lv)/np.trapz(vdis(lv), lv)
+	print('Averaged T21 with streaming motions : {} mK'.format(T21))
 	#"""
 	
-	"""
 	lls = ['-', '--', '-.', ':']
 	llc = ['b', 'g', 'orange', 'r']#['g', 'yellow', 'orange', 'r']
 	lv0 = [1e-10, 30, 60, 90]
@@ -381,7 +446,7 @@ if __name__=="__main__":
 			ax2.plot(d['lz']+1, d['u']/1e6, ls='-.', color=c, label=r'$0.1u_{\mathrm{th}}$, '+l)
 	ax1.plot(d['lz']+1, T_b(d['lz']), 'k-.', label=r'$T_{\mathrm{b}}$, CDM')
 	#ax1.plot(d['lz']+1, T_dm(d['lz'], mdm), 'k:', label=r'$T_{\mathrm{DM}}$, CDM')
-	ax1.fill_between([16, 19],[up1, up1],[down1, down1],label='EDGEDS',facecolor='gray')
+	ax1.fill_between([16, 19],[up1, up1],[down1, down1],label='EDGES',facecolor='gray')
 	ax1.set_xlabel(r'$1+z$')
 	ax1.set_ylabel(r'$T\ [\mathrm{K}]$')
 	ax1.legend(loc=4)
@@ -400,7 +465,7 @@ if __name__=="__main__":
 	plt.tight_layout()
 	plt.savefig('T_z_mdm'+str(mdm)+'GeV_logsigma1'+str(sig)+'_.pdf')
 
-	
+	"""
 	m_dm = 0.3
 	#z0, z1 = 1e3, 9
 	z0, z1 = 500, 9
@@ -418,7 +483,7 @@ if __name__=="__main__":
 		plt.plot(lz+1, dv_z(lz, 60., Mdm=m_dm, sigma=10**s)/1e5, color=llc[1], ls=i, lw=3, alpha=0.5)
 		plt.plot(lz+1, dv_z(lz, 90., Mdm=m_dm, sigma=10**s)/1e5, color=llc[2], ls=i, lw=3, alpha=0.5)
 	a = [plt.plot(lz+1, vbdm_z(lz, i*30)/1e5, label=r'$v_{\mathrm{bDM}}$, $'+str(i)+'\sigma$', color = llc[i-1], lw=1) for i in range(1, 4)]
-	plt.fill_between([16, 19],[up, up],[down, down],label='EDGEDS',facecolor='gray')
+	plt.fill_between([16, 19],[up, up],[down, down],label='EDGES',facecolor='gray')
 	plt.plot([], [], 'k', lw=3, alpha=0.3, label=r'$-\dot{v}t_{\mathrm{H}}$')
 	plt.xlabel(r'$1+z$')
 	plt.ylabel(r'$v\ [\mathrm{km\ s^{-1}}]$')
@@ -441,7 +506,7 @@ if __name__=="__main__":
 		plt.plot(lz+1, dv_z(lz, 60., Mdm=m, sigma=10**sig)/1e5, color=llc[1], ls=i, lw=3, alpha=0.5)
 		plt.plot(lz+1, dv_z(lz, 90., Mdm=m, sigma=10**sig)/1e5, color=llc[2], ls=i, lw=3, alpha=0.5)
 	a = [plt.plot(lz+1, vbdm_z(lz, i*30)/1e5, label=r'$v_{\mathrm{bDM}}$, $'+str(i)+'\sigma$', color = llc[i-1], lw=1) for i in range(1, 4)]
-	plt.fill_between([16, 19],[up, up],[down, down],label='EDGEDS',facecolor='gray')
+	plt.fill_between([16, 19],[up, up],[down, down],label='EDGES',facecolor='gray')
 	plt.plot([], [], 'k', lw=3, alpha=0.3, label=r'$-\dot{v}t_{\mathrm{H}}$')
 	plt.xlabel(r'$1+z$')
 	plt.ylabel(r'$v\ [\mathrm{km\ s^{-1}}]$')
