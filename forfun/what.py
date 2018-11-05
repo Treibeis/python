@@ -1,7 +1,7 @@
 import time
 def sushu(n = 100):
 	"""
-	Print all the prime numbers no larger than n on the screen, n>=3
+	Print all the prime numbers no larger than n on the screen, n>=2
 	"""
 	st = time.time()
 	ls = [2] # list of the prime numbers
@@ -10,6 +10,7 @@ def sushu(n = 100):
 		for i in ls:
 			if a%i==0:
 				t = 1
+				break
 		if t==0:
 			ls.append(a)
 	#ls = [2]+[a for a in range(3,n+1) if min([a%i for i in range(2,a)])>0]
