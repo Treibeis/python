@@ -93,6 +93,11 @@ def T_dm(z, m = 1., T0=2.726):
 def tff(z = 10.0, delta = 200):
 	return (3*np.pi/(32*GRA*delta*rhom(1/(1+z))))**0.5
 
+def Vcir(m = 1e10, z = 10.0, delta = 200):
+	M = m*UM/1e10
+	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
+	return (GRA*M/Rvir)**0.5
+
 def Lvir(m = 1e10, z = 10.0, delta = 200):
 	M = m*UM/1e10
 	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
