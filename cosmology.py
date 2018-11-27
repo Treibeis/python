@@ -85,7 +85,7 @@ def T_b(z, a1=1./119, a2=1./115, T0=2.726):
 	return T0/(a*(1+a/(a1*(1+(a2/a)**1.5))))
 
 def T_dm(z, m = 1., T0=2.726):
-	zc = m*eV / ((3./2)*BOL*T0) - 1
+	zc = m*1e9*eV / ((3./2)*BOL*T0) - 1
 	Tc = T0*(1+zc)
 	return T0*(1+z) * (z>zc) + Tc*((1+z)/(1+zc))**2 * (z<=zc)
 
