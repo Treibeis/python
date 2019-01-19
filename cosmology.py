@@ -98,6 +98,10 @@ def Vcir(m = 1e10, z = 10.0, delta = 200):
 	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
 	return (GRA*M/Rvir)**0.5
 
+def M_vcir(z, v, delta = 200):
+	M = v**3 / GRA**1.5 /(4*np.pi*rhom(1/(1+z))*delta/3)**0.5
+	return M*1e10/UM
+
 def Lvir(m = 1e10, z = 10.0, delta = 200):
 	M = m*UM/1e10
 	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
