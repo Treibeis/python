@@ -44,7 +44,7 @@ G = GRA*UM*UT**2/UL**3
 # Cosmology
 def H(a, Om = 0.315, h = 0.6774, OR = 9.54e-5):
 	H0 = h*100*UV/UL/1e3
-	H = H0*(Om/a**3+(1-Om)+OR/a**4)**0.5
+	H = H0*(Om/a**3+(1-Om-OR)+OR/a**4)**0.5
 	return H
 
 def DZ(z, Om = 0.315, h = 0.6774, OR = 9.54e-5):
