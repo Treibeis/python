@@ -45,8 +45,8 @@ def Hmod(a, D, init = init0):
 
 def t_a(a, D, init = init0):
 	def dt_da(a):
-		1/a/Hmod(a, D, init)
-	a1 = init[0]
+		return 1/a/Hmod(a, D, init)
+	a1 = 0.0#init[0]
 	I = quad(dt_da, a1, a, epsrel = 1e-8)
 	return I[0]
 
@@ -66,16 +66,16 @@ if __name__ == '__main__':
 	lz = 1./la - 1.
 
 	plt.figure()
-	plt.plot(la, [delta(a, 1, D0) for a in la])
-	plt.xlabel(r'$a$')
+	plt.plot(lz, [delta(a, 1, D0) for a in la])
+	plt.xlabel(r'$z$')
 	plt.ylabel(r'$\Delta$')
 	plt.xscale(r'log')
+	plt.xlim(1e-2, 1e3)
+	plt.ylim(1, 1.6)
 	plt.tight_layout()
-	plt.savefig('Delta_a.pdf')
+	plt.savefig('Delta_z.pdf')
 	plt.close()
 
-	la = np.logspace(-3, 0, 100)
-	lz = 1./la - 1.
 	H_unit = (100*UV/UL/1e3)
 	lH = np.array([Hmod(a, D0) for a in la])/H_unit
 	lH0 = H(la, Om, h1)/H_unit
@@ -87,11 +87,14 @@ if __name__ == '__main__':
 	plt.legend()
 	plt.xlabel(r'$z$')
 	plt.ylabel(r'$H\ [\mathrm{100\ km\ s^{-1}\ Mpc^{-1}}]$')
-	plt.xlim(1e-2, 10)
+	plt.xlim(1e-3, 10)
 	plt.ylim(0.1, 1e2)
 	plt.tight_layout()
 	plt.savefig('Hubble_z.pdf')
 	plt.close()
+
+	la = np.logspace(-3, 0, 100)
+	lz = 1./la - 1.
 
 	ldL = np.array([dC_a(a, D0) for a in la])/(UL*1e3)#/la
 	ldL0 = np.array([DZ(z) for z in lz])/(UL*1e3)#/la
@@ -105,5 +108,20 @@ if __name__ == '__main__':
 	plt.ylim(10, 1e5)
 	plt.tight_layout()
 	plt.savefig('dC_z.pdf')
+	plt.close()
+
+	lt = np.array([t_a(a, D0) for a in la])/(1e9*YR)
+	lt0 = np.array([TZ(z) for z in lz])/(1e9*YR)
+	print('t0_mod = {}, t0_FLRW = {} [Gyr]'.format(lt[-1], lt0[-1]))
+	plt.figure()
+	plt.loglog(lz, lt, label=r'$\Delta_{0}='+str(int(D0*1000)/1000)+'$')
+	plt.loglog(lz, lt0, '--', label=r'FLRW')
+	plt.legend()
+	plt.xlabel(r'$z$')
+	plt.ylabel(r'$t\ [\mathrm{Gyr}]$')
+	plt.xlim(1e-2, 1e3)
+	plt.ylim(1e-3, 20)
+	plt.tight_layout()
+	plt.savefig('t_z.pdf')
 	plt.close()
 
