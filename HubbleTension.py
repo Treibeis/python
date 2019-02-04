@@ -35,9 +35,9 @@ def init(zdec = 1100, Om = 0.315, Or = 9.54e-5, h = 0.6774):
 
 init0 = init()
 
-def Hmod(a, D, init = init0):
+def Hmod(a, D, init = init0, a0 = 2.):
 	a1 = init[0]
-	rhom = init[1]*delta(a, 1., D)*(a1/a)**3
+	rhom = init[1]*delta(a, a0, D)*(a1/a)**3
 	rhor = init[2]*(a1/a)**4
 	rhol = init[3]
 	rho = rhom + rhor + rhol
@@ -61,17 +61,17 @@ if __name__ == '__main__':
 	h2 = 0.7352
 	Om = 0.315
 	D0 = ((h2/h1)**2.-(1.-Om))/Om
-	print('Default Delta0 = {}'.format(D0))
+	print('Default delta_0 = {}'.format(D0-1))
 	la = np.logspace(-3, 0, 1000)
 	lz = 1./la - 1.
 
 	plt.figure()
-	plt.plot(lz, [delta(a, 1, D0) for a in la])
+	plt.plot(lz, [delta(a, 1, D0)-1. for a in la])
 	plt.xlabel(r'$z$')
-	plt.ylabel(r'$\Delta$')
+	plt.ylabel(r'$\delta$')
 	plt.xscale(r'log')
 	plt.xlim(1e-2, 1e3)
-	plt.ylim(1, 1.6)
+	plt.ylim(0, .6)
 	plt.tight_layout()
 	plt.savefig('Delta_z.pdf')
 	plt.close()
@@ -82,7 +82,7 @@ if __name__ == '__main__':
 	print('H0_mod = {}, H0_FLRW = {} [100 km s^-1 Mpc^-1]'.format(lH[-1], lH0[-1]))
 
 	plt.figure()
-	plt.loglog(lz, lH, label=r'$\Delta_{0}='+str(int(D0*1000)/1000)+'$')
+	plt.loglog(lz, lH, label=r'$\delta_{0}='+str(int((D0-1)*1000)/1000)+'$')
 	plt.loglog(lz, lH0, '--', label=r'FLRW')
 	plt.legend()
 	plt.xlabel(r'$z$')
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 	ldL = np.array([dC_a(a, D0) for a in la])/(UL*1e3)#/la
 	ldL0 = np.array([DZ(z) for z in lz])/(UL*1e3)#/la
 	plt.figure()
-	plt.loglog(lz, ldL, label=r'$\Delta_{0}='+str(int(D0*1000)/1000)+'$')
+	plt.loglog(lz, ldL, label=r'$\delta_{0}='+str(int((D0-1)*1000)/1000)+'$')
 	plt.loglog(lz, ldL0, '--', label=r'FLRW')
 	plt.legend()
 	plt.xlabel(r'$z$')
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 	lt0 = np.array([TZ(z) for z in lz])/(1e9*YR)
 	print('t0_mod = {}, t0_FLRW = {} [Gyr]'.format(lt[-1], lt0[-1]))
 	plt.figure()
-	plt.loglog(lz, lt, label=r'$\Delta_{0}='+str(int(D0*1000)/1000)+'$')
+	plt.loglog(lz, lt, label=r'$\delta_{0}='+str(int((D0-1)*1000)/1000)+'$')
 	plt.loglog(lz, lt0, '--', label=r'FLRW')
 	plt.legend()
 	plt.xlabel(r'$z$')
