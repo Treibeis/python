@@ -5,6 +5,9 @@ from scipy.integrate import odeint, ode
 from scipy.interpolate import interp1d
 from txt import *
 import multiprocessing as mp
+import matplotlib
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
 
 foralpha = lambda x: ((x-np.sin(x))/(2.*np.pi))**(2./3)
 
@@ -353,6 +356,7 @@ if __name__=="__main__":
 	plt.tight_layout()
 	plt.savefig('T21Ratio.pdf')
 	"""
+	"""
 	if mode==0:
 		X, Y, Z, Tb = parasp(v0, m1 = -4, m2 = 2, s1 = -1, s2 = 2, nbin = nbin, xa0 = xa0, ncore = ncore)
 		totxt('X_'+str(v0)+'.txt',X,0,0,0)
@@ -391,8 +395,8 @@ if __name__=="__main__":
 	plt.tight_layout()
 	plt.savefig('T21map_vbDM'+str(v0)+'.pdf')
 	#plt.show()
-
-	#"""
+	"""
+	"""
 	mdm = 0.3
 	sig = 8e-20 #-19
 	if mode==0:
@@ -419,34 +423,35 @@ if __name__=="__main__":
 	plt.savefig('T21_v_mdm'+str(mdm)+'GeV_sigma_1'+str(sig)+'_.pdf')
 	T21 = np.trapz(vdis(lv)*lT21, lv)/np.trapz(vdis(lv), lv)
 	print('Averaged T21 with streaming motions : {} mK'.format(T21))
-	#"""
+	"""
 	
 	lls = ['-', '--', '-.', ':']
-	llc = ['b', 'g', 'orange', 'r']#['g', 'yellow', 'orange', 'r']
+	llc = ['k', 'b', 'g', 'r']#['b', 'g', 'orange', 'r']
 	lv0 = [1e-10, 30, 60, 90]
-	llb = [r'$v_{\mathrm{bDM},0}=0$', r'$v_{\mathrm{bDM},0}=1\sigma$', r'$v_{\mathrm{bDM},0}=2\sigma$', r'$v_{\mathrm{bDM},0}=3\sigma$']
-	mdm = 0.003 #3e-1
+	llb = [r'$v_{b\chi,0}=0$', r'$v_{b\chi,0}=1\sigma_{\mathrm{rms}}$', r'$v_{b\chi,0}=2\sigma_{\mathrm{rms}}$', r'$v_{b\chi,0}=3\sigma_{\mathrm{rms}}$']
+	mdm = 0.3# 0.003 #3e-1
 	sig = -19
 	zmax = 1000
 	z0, z1 = 1100, 9
-	fig = plt.figure(figsize=(12,6))
+	fig = plt.figure(figsize=(12,5))
 	ax1 = plt.subplot(121)
 	ax2 = plt.subplot(122)
-	down1, up1 = 1e-3, 1e3
+	down1, up1 = 1e-1, 1e3
 	down2, up2 = 1e-2, 1e2
-	ax1.text(z1+2, up1*0.4, r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
+	ax1.text(z1+2, up1*0.4, r'$m_{\mathrm{\chi}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
 	#ax2.text(z1+15, up2*0.75, r'$m_{\mathrm{DM}}c^{2}='+str(mdm)+r'\ \mathrm{GeV}$, $\sigma_{1}=10^{'+str(sig)+r'}\ \mathrm{cm^{2}}$')
 	for v, c, l, ls in zip(lv0, llc, llb, lls):
-		d = main(z0, z1, v0 = v, Mdm=mdm, sigma=10**sig, Tmin = 1e-5)
-		ax1.plot(d['lz']+1, d['Tb'], color=c, label=r'$T_{\mathrm{b}}$, '+l)
-		ax1.plot(d['lz']+1, d['Tdm'], color=c, label=r'$T_{\mathrm{DM}}$, '+l, ls='--')
-		if c is not 'b':
+		if c is not 'k':
+			d = main(z0, z1, v0 = v, Mdm=mdm, sigma=10**sig, Tmin = 1e-5)
+			ax1.plot(d['lz']+1, d['Tb'], color=c, label=r'$T_{b}$, '+l)
+			ax1.plot(d['lz']+1, d['Tdm'], color=c, label=r'$T_{\chi}$, '+l, ls='--')
+		if c is not 'k':
 			ax2.plot(d['lz']+1, d['v']/1e5, label=l, color=c)
-			ax2.plot(d['lz']+1, vbdm_z(d['lz'], v)/1e5, ls = '--', color=c, label=l+', CDM')
-			ax2.plot(d['lz']+1, d['u']/1e6, ls='-.', color=c, label=r'$0.1u_{\mathrm{th}}$, '+l)
-	ax1.plot(d['lz']+1, T_b(d['lz']), 'k-.', label=r'$T_{\mathrm{b}}$, CDM')
+			ax2.plot(d['lz']+1, d['u']/1e6, ls='--', color=c, label=r'$0.1u_{\mathrm{th}}$, '+l)
+			ax2.plot(d['lz']+1, vbdm_z(d['lz'], v)/1e5, ls = '-.', color=c, label=l+', CDM')
+	ax1.plot(d['lz']+1, T_b(d['lz']), 'k-.', label=r'$T_{b}$, CDM')
 	#ax1.plot(d['lz']+1, T_dm(d['lz'], mdm), 'k:', label=r'$T_{\mathrm{DM}}$, CDM')
-	ax1.fill_between([16, 19],[up1, up1],[down1, down1],label='EDGES',facecolor='gray')
+	ax1.fill_between([15, 20],[up1, up1],[down1, down1],label='EDGES',facecolor='gray')
 	ax1.set_xlabel(r'$1+z$')
 	ax1.set_ylabel(r'$T\ [\mathrm{K}]$')
 	ax1.legend(loc=4)
@@ -456,14 +461,14 @@ if __name__=="__main__":
 	ax1.set_ylim(down1, up1)
 	#ax2.plot(d['lz'],np.zeros(len(d['lz'])), 'k', lw=0.5)
 	ax2.set_xlabel(r'$1+z$')
-	ax2.set_ylabel(r'$v_{\mathrm{bDM}}\ [\mathrm{km\ s^{-1}}]$')
+	ax2.set_ylabel(r'$v_{b\chi}\ [\mathrm{km\ s^{-1}}]$')
 	ax2.set_xscale('log')
 	ax2.set_yscale('log')
 	ax2.legend(loc=4)
 	ax2.set_xlim(z1+1, zmax)
 	ax2.set_ylim(down2, up2)
 	plt.tight_layout()
-	plt.savefig('T_z_mdm'+str(mdm)+'GeV_logsigma1'+str(sig)+'_.pdf')
+	plt.savefig('T_z.pdf')#_mdm'+str(mdm)+'GeV_logsigma1'+str(sig)+'_.pdf')
 
 	"""
 	m_dm = 0.3
