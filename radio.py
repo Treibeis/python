@@ -9,9 +9,12 @@ from matplotlib.colors import LogNorm
 import scipy.stats as stats
 from cosmology import *
 from coolingf import *
+import matplotlib
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
 
-epsilon_ff = LambdaBre(T=2e4, nhII=93.0, nheII=0.0, nheIII=0.0, ne=93.0)
-epsilon_ff_ = LambdaBre(T=1e3, nhII=93.0*1e-4, nheII=0.0, nheIII=0.0, ne=93.0*1e-4)
+epsilon_ff = LambdaBre(T=2e4, nhII=93.0, nheII=0.0, nheIII=0.0, ne=93.0)*0.9
+epsilon_ff_ = LambdaBre(T=1e3, nhII=93.0*1e-4, nheII=0.0, nheIII=0.0, ne=93.0*1e-4)*0.9
 
 """
 def T_cosmic(z, alpha = -4, beta = 1.27, z0 = 189.6, zi = 1100, T0 = 3300):
@@ -43,7 +46,7 @@ def Tvir(m = 1e10, z = 10.0, delta = 200):
 
 def SFR_MF(M, z):
 	sfr0 = 3e-3*((1+z)/11)**1.5
-	return sfr0*M/1e8 * (M<=1e10) + sfr0*1e2*(M/1e10)**(5/3) * (M>1e10)*(M<=1e12) + sfr0*1e2*(1e2)**(5/3) * (M>1e12)
+	return sfr0*M/1e8 * (M<=1e10) + sfr0*1e2*(M/1e10)**(5/3) * (M>1e10)*(M<=1e12) + sfr0*1e2*(1e2)**(5/3)*(M/1e12) * (M>1e12)
 
 def SFE_MF(M, z):
 	sfe0 = 2e-2*11/(1+z)
@@ -301,7 +304,7 @@ def luminosity_syn(sn, facB = 1.0, facn = 1.0, p_index = 2.5, rep = './', box = 
 	out0 = np.sum([output.get() for p in processes])
 	return [z, out0*4*np.pi, p_index]
 
-def luminosity_tot(sn, rep = './', box = [[1750]*3,[2250]*3], nsh = 1.0, nsh2 = 1e-4, base = 'snapshot', ext = '.hdf5', ncore = 4, X=0.76, h = 0.6774, Om = 0.315):#,  Rv = 50.0, center=[2e3]*3):
+def luminosity_tot(sn, rep = './', box = [[1750]*3,[2250]*3], nsh = 1.0, nsh2 = 1e-5, base = 'snapshot', ext = '.hdf5', ncore = 4, X=0.76, h = 0.6774, Om = 0.315, Tsh = 1, nmax = 5e2, zmin = 15):#,  Rv = 50.0, center=[2e3]*3):
 	start = time.time()
 	#H0 = h*100*UV/UL/1e3
 	#rho0 = Om*H0**2*3/8/np.pi/GRA
@@ -327,7 +330,7 @@ def luminosity_tot(sn, rep = './', box = [[1750]*3,[2250]*3], nsh = 1.0, nsh2 = 
 	#M_tot = np.array(np.sum(ad[('PartType0','Masses')].to('Msun')) + np.sum(ad[('PartType1','Masses')].to('Msun'))) + Msink
 	#delta = M_tot/M_bg
 
-	shock = np.logical_or(ad[('PartType0','Density')].to_equivalent("cm**-3", "number_density",mu=mmw(ad[('PartType0','Primordial HII')])) > nsh, ad[('PartType0','Primordial H2')]>nsh2)
+	shock = np.logical_or(ad[('PartType0','Density')].to_equivalent("cm**-3", "number_density",mu=mmw(ad[('PartType0','Primordial HII')])) > nsh, ad[('PartType0','Primordial H2')]>nsh2) * (np.array(temp(ad[('PartType0','InternalEnergy')],ad[('PartType0','Primordial HII')]))>Tsh) * (np.array(ad[('PartType0','Density')].to_equivalent("cm**-3", "number_density",mu=mmw(ad[('PartType0','Primordial HII')])))<nmax)
 	nump = ad[('PartType0','Coordinates')][shock].shape[0]
 	ln = np.array(ad[('PartType0','Density')][shock].to_equivalent("cm**-3", "number_density",mu=mmw(ad[('PartType0','Primordial HII')][shock])))
 	lm = ad[('PartType0','Masses')][shock]
@@ -338,6 +341,8 @@ def luminosity_tot(sn, rep = './', box = [[1750]*3,[2250]*3], nsh = 1.0, nsh2 = 
 	lxHD = ad[('PartType0','Primordial HD')][shock]
 	lxHII = ad[('PartType0','Primordial HII')][shock]
 	lxe = ad[('PartType0','Primordial e-')][shock]
+	NP = len(lxe)
+	print(NP)
 	np_core = int(nump/ncore)
 	lpr = [[i*np_core, (i+1)*np_core] for i in range(ncore-1)] + [[(ncore-1)*np_core, nump]]
 	print(lpr)
@@ -345,7 +350,9 @@ def luminosity_tot(sn, rep = './', box = [[1750]*3,[2250]*3], nsh = 1.0, nsh2 = 
 	output = manager.Queue()
 	def sess(pr0, pr1):
 		Ltot = 0
+		Lff = 0
 		for i in range(pr0, pr1):
+			xh = 4*X/(1+3*X+4*X*lxHII[i])
 			n = ln[i]*xh
 			m = lm[i]
 			rho = lrho[i]
@@ -356,30 +363,33 @@ def luminosity_tot(sn, rep = './', box = [[1750]*3,[2250]*3], nsh = 1.0, nsh2 = 
 			nHD = n*lxHD[i]*4.3e-5
 			ne = n*lxe[i]
 			nHII = n*lxHII[i]
-			nHeI = ln[i]*(1-xh)
+			nHeI = ln[i]*(1-xh*(1+lxHII[i]))
 			Lam = LambdaBre(T, nHII, 0, 0, ne) + LambdaIC(T, z, ne) + LambdaHeI(T, nHeI, ne) +\
-				LambdaHI(T, nH0, ne) + LambdaHII(T, nHII, ne) +\
+				LambdaHI(T, nH0, ne)*(T<1e4) + LambdaHII(T, nHII, ne) +\
 				LambdaH2_(T, nH2, nH0) + LambdaHD(T, nHD, nH0, n)
 			Ltot += Lam*V
-		output.put(Ltot)
+			Lff += LambdaBre(T, nHII, 0, 0, ne)*V
+		output.put([Ltot, Lff])
 	processes = [mp.Process(target=sess, args=(lpr[i][0], lpr[i][1])) for i in range(ncore)]
 	for p in processes:
 		p.start()
 	for p in processes:
 		p.join()
-	out0 = [output.get() for p in processes]
+	out00 = [output.get() for p in processes]
+	out0 = [x[0] for x in out00]
 	out = np.sum(out0)
+	Lff = np.sum([x[1] for x in out00])
 	MV = 0
-	if z<15:
+	if z<zmin:
 		obj = caesar.CAESAR(ds)
 		obj.member_search()
 		lh = obj.halos
 		if len(lh)>0:
 			MV = virial_mass(lh[0])
 	print('Time taken: {} s, MV_max: {} [Msun]'.format(time.time()-start, MV))
-	return [z, out, MV, Msink]
+	return [z, out, MV, Msink, Lff, NP, nmax]
 			
-def luminosity_particle(sn, rep = './', box = [[1900]*3,[2000]*3], nsh = 1e-5, base = 'snapshot', ext = '.hdf5', ncore = 4, X=0.76, nline=42, Tsh = 1e4, nmax = 1.0e4):
+def luminosity_particle(sn, rep = './', box = [[1900]*3,[2000]*3], nsh = 1e-5, base = 'snapshot', ext = '.hdf5', ncore = 4, X=0.76, nline=42, Tsh = 1e4, nmax = 5e2):
 	xh = 4*X/(1+3*X)
 	mu0 = 4/(1+3*X)
 	ds = yt.load(rep+base+'_'+str(sn).zfill(3)+ext)
@@ -405,6 +415,7 @@ def luminosity_particle(sn, rep = './', box = [[1900]*3,[2000]*3], nsh = 1e-5, b
 	lxH2 = ad[('PartType0','Primordial H2')][shock]
 	lxH0 = ad[('PartType0','Primordial HI')][shock]
 	lxHD = ad[('PartType0','Primordial HD')][shock]
+	lxHII = ad[('PartType0','Primordial HII')][shock]
 	np_core = int(nump/ncore)
 	lpr = [[i*np_core, (i+1)*np_core] for i in range(ncore-1)] + [[(ncore-1)*np_core, nump]]
 	print(lpr)
@@ -420,6 +431,7 @@ def luminosity_particle(sn, rep = './', box = [[1900]*3,[2000]*3], nsh = 1e-5, b
 		lnu_scale = np.zeros(pr1-pr0)
 		lH2 = np.zeros(nline)
 		for i in range(pr0, pr1):
+			xh = 4*X/(1+3*X+4*X*lxHII[i])
 			n = ln[i]*xh
 			m = lm[i]
 			rho = lrho[i]
@@ -459,7 +471,7 @@ def luminosity_particle(sn, rep = './', box = [[1900]*3,[2000]*3], nsh = 1e-5, b
 	d['line'] = lH2
 	return d
 
-def grid(mesh, sn, rep = './', box = [[1750]*3,[2250]*3], Tsh = 1e3, mode = 0, base = 'snapshot', ext = '.hdf5', Tmin = 10.0, ncore = 1, X = 0.76, nsh = 1e8):#, h = 0.6774):
+def grid(mesh, sn, rep = './', box = [[1750]*3,[2250]*3], Tsh = 1e3, mode = 0, base = 'snapshot', ext = '.hdf5', Tmin = 10.0, ncore = 1, X = 0.76, nsh = 5e2):#, h = 0.6774):
 	start = time.time()
 	ds = yt.load(rep+base+'_'+str(sn).zfill(3)+ext)
 	#z = ds['Redshift']
