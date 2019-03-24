@@ -18,6 +18,10 @@ YR = 3600*24*365
 PC = 3.085678e18
 SIGMATH = 8*np.pi*(CHARGE**2/ELECTRON/SPEEDOFLIGHT**2)**2/3
 
+AU = 1.495978707e13
+Lsun = 3.828e33
+Rsun = 6.96342e10
+
 # Primordial abundances
 Hfrac = 0.76
 XeH = 0.0
