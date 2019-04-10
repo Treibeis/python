@@ -13,7 +13,7 @@ BOL = 1.3806e-16
 PROTON = 1.6726e-24
 #PROTON = 1.6726e-24/(2.176e-5)
 
-UL = 3.085678e24
+UL = 3.085678e21
 #UL = 1.0
 UM = 1.989e43
 #UM = 1.0
@@ -227,45 +227,6 @@ def load(fname, fn = 1, IC = 0, so = -1, tem = 1, ed = '<', dummy = 4):
 			output[k] = sort(output[k],so)
 		#output[k] = sort(output[k], 6)
 	return [lpara, output]
-
-def cut(d, box = (100.0, 100.0, 100.0), obs = (200.0,200.0,200.0)):
-	head = d['head'][0]
-	out = []
-	lpara = []
-	for i in range(len(d['l'])):
-		out.append([])
-		for k in range(len(d['l'][i])):
-			out[i].append([])
-			index = []
-			for j in range(len(d['l'][i][k][0])):
-				t = 0
-				if (d['l'][i][k][0][j]>obs[0])and(d['l'][i][k][0][j]<obs[0]+box[0]):
-					t += 1
-				if (d['l'][i][k][1][j]>obs[1])and(d['l'][i][k][1][j]<obs[1]+box[1]):
-					t += 1
-				if (d['l'][i][k][2][j]>obs[2])and(d['l'][i][k][2][j]<obs[2]+box[2]):
-					t += 1
-				if t==3:
-					index.append(j)
-			for m in range(len(d['l'][i][k])):
-				out[i][k].append(np.zeros(len(index), dtype=d['l'][i][k][m].dtype))
-			for n in range(len(index)):
-				for s in range(len(d['l'][i][k])):
-					out[i][k][s][n] = d['l'][i][k][s][index[n]]
-		lpara.append([])
-		lpara[i].append([])
-		lpara[i][0]=d['head'][1][i][0]
-		count = 0
-		for r in range(6):
-			if d['head'][1][i][0][4][r]!=0: 
-				lpara[i][0][0][r]=len(out[i][count][0])
-				lpara[i][0][4][r]=len(out[i][count][0])
-				count += 1
-		lpara[i][0][6]=box[0]
-	dout = {}
-	dout['head'] = [head, lpara]
-	dout['l'] = out
-	return dout
 		
 def write(d, name = 'test_ics', ed = '<', dummy = 4):
 	inte = ed+'i'
@@ -325,6 +286,44 @@ def write(d, name = 'test_ics', ed = '<', dummy = 4):
 			a = [f.write(struct.pack(real, d['l'][0][0][8][x])) for x in range(d['head'][1][0][0][4][0])]
 			a = f.write(struct.pack(inte, d['head'][1][0][0][4][0]))
 					
+def cut(d, box = (100.0, 100.0, 100.0), obs = (200.0,200.0,200.0)):
+	head = d['head'][0]
+	out = []
+	lpara = []
+	for i in range(len(d['l'])):
+		out.append([])
+		for k in range(len(d['l'][i])):
+			out[i].append([])
+			index = []
+			for j in range(len(d['l'][i][k][0])):
+				t = 0
+				if (d['l'][i][k][0][j]>obs[0])and(d['l'][i][k][0][j]<obs[0]+box[0]):
+					t += 1
+				if (d['l'][i][k][1][j]>obs[1])and(d['l'][i][k][1][j]<obs[1]+box[1]):
+					t += 1
+				if (d['l'][i][k][2][j]>obs[2])and(d['l'][i][k][2][j]<obs[2]+box[2]):
+					t += 1
+				if t==3:
+					index.append(j)
+			for m in range(len(d['l'][i][k])):
+				out[i][k].append(np.zeros(len(index), dtype=d['l'][i][k][m].dtype))
+			for n in range(len(index)):
+				for s in range(len(d['l'][i][k])):
+					out[i][k][s][n] = d['l'][i][k][s][index[n]]
+		lpara.append([])
+		lpara[i].append([])
+		lpara[i][0]=d['head'][1][i][0]
+		count = 0
+		for r in range(6):
+			if d['head'][1][i][0][4][r]!=0: 
+				lpara[i][0][0][r]=len(out[i][count][0])
+				lpara[i][0][4][r]=len(out[i][count][0])
+				count += 1
+		lpara[i][0][6]=box[0]
+	dout = {}
+	dout['head'] = [head, lpara]
+	dout['l'] = out
+	return dout
 
 def sort(l, index = 7):
 	print('Begin sorting')
