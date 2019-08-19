@@ -32,6 +32,9 @@ H00 = 1e7/MPC
 Hfrac = 0.76
 XeH = 0.0
 XeHe = 0.0
+xnd = 4e-5
+xnli = 4.6e-10
+
 def mmw(xeH = XeH, xeHe = XeHe, X = Hfrac):
 	xh = 4*X/(1+3*X)
 	return 4.0/(1.0+3*X)/(xh*(1+xeH)+(1-xh)*(1+xeHe))
