@@ -32,9 +32,6 @@ H00 = 1e7/MPC
 Hfrac = 0.76
 XeH = 0.0
 XeHe = 0.0
-xnd = 4e-5
-xnli = 4.6e-10
-
 def mmw(xeH = XeH, xeHe = XeHe, X = Hfrac):
 	xh = 4*X/(1+3*X)
 	return 4.0/(1.0+3*X)/(xh*(1+xeH)+(1-xh)*(1+xeHe))
@@ -53,6 +50,11 @@ UP = UM/UL/UT**2
 UE = UM*UL**2/UT**2
 
 G = GRA*UM*UT**2/UL**3
+
+def BB_spectrum(nu0, T):
+  numax = 50.*BOL*T/PLANCK
+  nu = nu0 * (nu0<numax) + numax * (nu0>=numax)
+  return 2*PLANCK/SPEEDOFLIGHT**2 * nu**3/(np.exp(PLANCK*nu/(BOL*T))-1) * (nu<=numax)
 
 # Cosmology
 def H(a, Om = 0.315, h = 0.6774, OR = 9.54e-5):

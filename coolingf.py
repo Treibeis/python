@@ -143,6 +143,100 @@ def ncrit(T):
 	out.append(LLTE/Llow)
 	return out
 
+def pow(x, y):
+	return x**y
+
+def lam_2level(gamma_H_21, gamma_H_12, gamma_e_21, gamma_e_12, A21, delta_E21, xe, nh, ntot):  
+	top = gamma_H_12 + gamma_e_12*xe;
+	bottom = gamma_H_12 + gamma_H_21 + (gamma_e_12 + gamma_e_21)*xe + A21/nh;
+
+	return top/bottom * (ntot * A21 * delta_E21);
+
+def JJ_metal_cooling(temp, xn, xe, Z):
+	"""
+	=======================================================================
+	Metal fine structure cooling from CII, OI, SiII and FeII
+	added by JdJ 03/2017 based on CSS code and equations in Maio:07
+
+  	xn - total number density in physical cgs
+	=======================================================================*/
+	"""
+	nh = xn * 0.93;
+	#Asplund:09 solar abundances
+	x_CII = 3.26e-3 Z;    
+	x_OI = 8.65e-3 * Z;    
+	x_SiII = 1.08e-3 * Z;    
+	x_FeII = 1.73e-3 * Z;   
+  
+	#total number density for each species
+	n_CII = x_CII * nh;
+	n_OI = x_OI * nh;
+	n_SiII = x_SiII * nh;
+	n_FeII = x_FeII * nh;
+
+	#if Z=0 or T>20000 K no need to calculate lambda metals
+	if (P[i].Metallicity[0]==0.0 || temp>20000.0):
+		return 0.0;
+
+	#CII
+	CII_gamma_H_21 = 8e-10 * pow((temp/100.0),0.07);
+	CII_gamma_e_21 = 2.8e-7 * pow((temp/100.0),-0.5);
+	CII_A21 = 2.4e-6;
+	CII_delta_E21 = 1.259e-14;
+	CII_g2=4.;
+	CII_g1=2.;
+
+	beta = pow((BOLTZMANN*temp),-1.0);
+	CII_gamma_e_12 = CII_g2/CII_g1 * CII_gamma_e_21 * exp(-1*beta*CII_delta_E21);
+	CII_gamma_H_12 = CII_g2/CII_g1 * CII_gamma_H_21 * exp(-1*beta*CII_delta_E21);
+
+	lambda_CII = lam_2level(CII_gamma_H_21,CII_gamma_H_12,CII_gamma_e_21,CII_gamma_e_12,CII_A21,CII_delta_E21,xe,nh,n_CII);
+
+	#SiII
+	SiII_gamma_H_21 = 8e-10 * pow((temp/100.0),-0.07);
+	SiII_gamma_e_21 = 1.7e-6 * pow((temp/100.0),-0.5);
+	SiII_A21 = 2.1e-4;
+	SiII_delta_E21 = 5.71e-14;
+	SiII_g2=4.;
+	SiII_g1=2.;
+  
+	SiII_gamma_e_12 = SiII_g2/SiII_g1 * SiII_gamma_e_21 * exp(-1*beta*SiII_delta_E21);
+	SiII_gamma_H_12 = SiII_g2/SiII_g1 * SiII_gamma_H_21 * exp(-1*beta*SiII_delta_E21);
+
+	lambda_SiII = lam_2level(SiII_gamma_H_21,SiII_gamma_H_12,SiII_gamma_e_21,SiII_gamma_e_12,SiII_A21,SiII_delta_E21,xe,nh,n_SiII);
+
+	#OI 1-->2  NOTE: just treating OI and FeII as 2-level system...need to update to 3-level but should be minimal impact
+	OI_gamma_H_21 = 9.2e-11 * pow((temp/100.0),0.67);
+	OI_gamma_e_21 = 1.4e-8; 
+	OI_A21 = 8.9e-5;
+	OI_delta_E21 = 3.144e-14;
+	OI_g2=5.;
+	OI_g1=3.;
+
+	OI_gamma_e_12 = OI_g2/OI_g1 * OI_gamma_e_21 * exp(-1*beta*OI_delta_E21);
+	OI_gamma_H_12 = OI_g2/OI_g1 * OI_gamma_H_21 * exp(-1*beta*OI_delta_E21);
+
+	lambda_OI = lam_2level(OI_gamma_H_21,OI_gamma_H_12,OI_gamma_e_21,OI_gamma_e_12,OI_A21,OI_delta_E21,xe,nh,n_OI);
+
+	#FeI 1-->2
+	FeII_gamma_H_21 = 9.5e-10; 
+	FeII_gamma_e_21 = 1.8e-6 * pow((temp/100.),-0.5); 
+	FeII_A21 = 2.15e-3;
+	FeII_delta_E21 = 7.64e-14;
+	FeII_g2=8.;
+	FeII_g1=10.;
+
+	FeII_gamma_e_12 = FeII_g2/FeII_g1 * FeII_gamma_e_21 * exp(-1*beta*FeII_delta_E21);
+	FeII_gamma_H_12 = FeII_g2/FeII_g1 * FeII_gamma_H_21 * exp(-1*beta*FeII_delta_E21);
+
+	lambda_FeII = lam_2level(FeII_gamma_H_21,FeII_gamma_H_12,FeII_gamma_e_21,FeII_gamma_e_12,FeII_A21,FeII_delta_E21,xe,nh,n_FeII);
+  
+	lamda_metal = lambda_CII + lambda_SiII + lambda_OI + lambda_FeII;
+
+  	#return lamda_metal/(nh*nh);
+	return lamda_metal;
+
+
 # old
 """
 def LambdaH20(T, nh2=1e-3, nh=1):
