@@ -42,6 +42,29 @@ def retxt(s, n, k = 1, t = 1):
 	out[i] = np.array(out[i])
 	return out
 
+def retxt_nor(s, n, k = 1, t = 1, ind = 0, pre0 = 0):
+	out = []
+	for i in range(n):
+		out.append([])
+	j = 0
+	pre = pre0
+	with open(s, 'r') as f:
+		for line in f:
+			lst = line.split()
+			if j<k:
+				a=1#print (lst[0])
+			else:
+				if float(lst[ind]) >= pre:
+					for i in range(n):
+						out[i].append(float(lst[i]))
+					pre = float(lst[ind])
+			j = j+1
+	if t!=0:
+		for i in range(n):
+			out[i].reverse()
+	out[i] = np.array(out[i])
+	return out
+
 def totxt(s, l, ls = 0, t = 0, k = 0):
 	j = 0
 	with open(s, 'w') as f:

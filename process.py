@@ -9,6 +9,12 @@ from scipy.optimize import *
 import sys
 from cosmology import *
 
+def sumy(l):
+	return np.array([np.min(l), np.max(l), np.average(l), np.median(l)])
+
+def rSTM(Nion=1e48, ms=500, nH=1e-2, alphaB = 2.59e-13):
+	return (3*Nion*ms/(4*np.pi*nH**2*alphaB))**(1/3) / KPC
+
 def temp_(u, Y, X = Hfrac, gamma = 5.0/3):
 	M = PROTON*4.0/(3*X+1+4*X*Y)
 	U = u.to('erg/g')
@@ -46,15 +52,16 @@ def cosmicT(z = 99, zd = 200.0, zre = 1100):
 
 lls = ['-', '--', '-.', ':']
 lls = lls*2
-lrep = ['N128L4_cdm/', 'N128L4_wdm/', 'N128L4_cdm_dvx30/']
-lmodel = ['CDM', 'WDM_3_kev', 'DVX30']
-lmodel_ = ['CDM', 'WDM_3_keV', 'DVX30']
+lrep = ['N128L4_cdm/', 'N128L4_wdm/']#, 'N128L4_cdm_dvx30/']
+#lmodel = ['CDM', 'WDM_3_kev', 'DVX30']
+#lmodel_ = ['CDM', 'WDM_3_keV', 'DVX30']
+lmodel = ['old', 'new']
 
-def loaddata(sn = 37, en = 50, rep = './', base = 'snapshot', ext = '.hdf5', post = 'caesar'):
+def loaddata(sn = 37, en = 50, rep = './', base = 'snapshot', ext = '.hdf5', post = 'caesar', b = 0.2):
 	for i in range(sn, en+1):
 		ds = yt.load(rep+base+'_'+str(i).zfill(3)+ext)
 		obj = caesar.CAESAR(ds)
-		obj.member_search()
+		obj.member_search(b_halo=b, b_galaxy=b/10)
 		obj.save(rep+post+'_'+str(i).zfill(3)+ext)
 	return {'obj':obj, 'ds':ds}
 
@@ -79,24 +86,31 @@ def center(pos0, ref, rad, boxs, fac = 2.5):
 	pos = pos0 + boxs*(ref-pos0>boxs/2.0-rad*fac)*(ref>boxs/2.0) - boxs*(pos0-ref>boxs/2.0-rad*fac)*(ref<=boxs/2.0)
 	return np.average(pos,axis=0)
 	
-def find_cen(group, boxs = 4000, h = 0.6774, fac = 2.5):
+def find_cen(group, boxs = 4000, h = 0.6774, fac = 2.5, mode=0):
 	rad = float(group.radii['virial'].to('kpccm/h'))
 	DM = group.obj.data_manager
 	ref = np.array(group.pos.to('kpccm/h')) 
-	pos0 = DM.pos[DM.dmlist[group.dmlist]]*h
+	if mode==0:
+		pos0 = DM.pos[DM.dmlist[group.dmlist]]*h
+	else:
+		pos0 = DM.pos[DM.slist[group.slist]]*h
 	return center(pos0, ref, rad, boxs, fac)#pos0 + boxs*(ref-pos0>boxs/2.0-rad*fac)*(ref>boxs/2.0) - boxs*(pos0-ref>boxs/2.0-rad*fac)*(ref<=boxs/2.0)
 	#return np.average(pos,axis=0)
 
 new_3Dax = lambda x: plt.subplot(x,projection='3d')
 
-def dis3D(data, group_index, axis, nump = 1e5, norm = 10.0, boxs = 4000, h = 0.6774):
-	group = data['obj'].halos[group_index]
+def dis3D(data, group_index, axis, nump = 1e5, norm = 10.0, boxs = 4000, mode = 1):
+	if mode==0:
+		group = data['obj'].halos[group_index]
+	else:
+		group = data['obj'].galaxies[group_index]
+	h = data['ds']['HubbleParam']
 	#ad = data['ds'].all_data()
 	llb = [r'$x\ [h^{-1}\mathrm{kpc}]$', r'$y\ [h^{-1}\mathrm{kpc}]$', r'$z\ [h^{-1}\mathrm{kpc}]$']
 	DM = group.obj.data_manager
 	lm = virial_mass(group)
 	rV = float(group.radii['virial'].to('kpccm/h'))
-	posh = find_cen(group, boxs, h)
+	posh = find_cen(group, boxs, h, mode=mode)
 	posg = DM.pos[DM.glist[group.glist]]*h#.to('kpccm/h')
 	posd = DM.pos[DM.dmlist[group.dmlist]]*h#.to('kpccm/h')
 	posg = to_center(posg,posh,boxs).T
@@ -178,7 +192,7 @@ hmf1.update(n=0.966, sigma_8=0.829,cosmo_params={'Om0':0.315,'H0':67.74},Mmin=4,
 #HMF = 'mVector_PLANCK-SMT .txt'
 #HMF0 = 'mVector_PLANCK-SMT0 .txt'
 #Redf=retxt('output_25_4.txt',1,0,0)[0]
-fac0 = 0.208671*0.3153754*0.1948407
+fac0 = 1.0#0.208671*0.3153754*0.1948407
 
 
 
@@ -221,34 +235,35 @@ def halom(sn, rep ='./', indm = 0, anaf1 = hmf1, anaf0 = hmf0, mlow = 1e6, fac =
 	#plt.show()
 	return lm
 
-def plothm(l = lrep, sn = 28, nbin = 15, rm = [8, 10], anaf = hmf0, boxs = 4.0):
+def plothm(l = lrep, sn = 28, nbin = 15, rm = [8, 10], anaf = hmf0, boxs = 4.0, base = 'snapshot', ext = '.hdf5', h=0.6774):
+	ds = yt.load(lrep[0]+base+'_'+str(sn).zfill(3)+ext)
 	z = ds['Redshift']#1/Redf[sn]-1
-	lhm = [halom(sn, l[x], x) for x in range(3)]
+	lhm = [halom(sn, l[x], x) for x in range(len(l))]
 	lhis = []
 	lbs = []
-	for i in range(3):
+	for i in range(len(l)):
 		his, ed = np.histogram(np.log10(lhm[i]), nbin, rm)
 		lbs.append((ed[1:]+ed[:-1])/2+0.03*i)
 		if i==0: 
 			bs = (ed[1]-ed[0])
 		lhis.append(his)
 	anaf.update(z=z)
-	lm = np.log10(anaf.m)
+	lm = np.log10(anaf.m/h)
 	ln = np.log10(anaf.dndlog10m)
 	mf_ana = interp1d(lm, ln)
 	#mf_file = retxt(anaf, 11, 12, 0)
 	#mf_ana = interp1d(np.log10(mf_file[0]),mf_file[7])
 	plt.figure(figsize=(12,5))
 	plt.subplot(121)
-	[plt.errorbar(lbs[i], lhis[i]/boxs**3/bs, yerr=lhis[i]**0.5/boxs**3/bs, ls=lls[i], label=lmodel[i]) for i in range(3)]
-	plt.plot(lbs[0], mf_ana(lbs[0]), ls=lls[3], label='Sheth-Mo-Tormen')
+	[plt.errorbar(lbs[i], lhis[i]/boxs**3/bs, yerr=lhis[i]**0.5/boxs**3/bs, ls=lls[i], label=lmodel[i]) for i in range(len(l))]
+	plt.plot(lbs[0], 10**mf_ana(lbs[0]), ls=lls[3], label='Sheth-Mo-Tormen')
 	plt.legend()
 	plt.yscale('log')
 	plt.xlabel(r'$\log(M_{V}\ [h^{-1}M_{\odot}])$')
 	plt.ylabel(r'$\frac{dn}{d\log(M)}\ [h^{3}\mathrm{Mpc^{-3}}]$')
 	plt.subplot(122)
-	plt.errorbar(lbs[0], mf_ana(lbs[0])-lhis[0]/boxs**3/bs, yerr=lhis[0]**0.5/boxs**3/bs, ls=lls[0], label='Analytical$-$CDM')
-	[plt.errorbar(lbs[i],(lhis[i]-lhis[0])/boxs**3/bs, yerr=(lhis[i]+lhis[0])**0.5/boxs**3/bs, ls =lls[i], label=lmodel[i]+r'$-$'+lmodel[0]) for i in range(1,3)]
+	plt.errorbar(lbs[0], 10**mf_ana(lbs[0])-lhis[0]/boxs**3/bs, yerr=lhis[0]**0.5/boxs**3/bs, ls=lls[0], label='Analytical$-$CDM')
+	[plt.errorbar(lbs[i],(lhis[i]-lhis[0])/boxs**3/bs, yerr=(lhis[i]+lhis[0])**0.5/boxs**3/bs, ls =lls[i], label=lmodel[i]+r'$-$'+lmodel[0]) for i in range(1,len(l))]
 	plt.plot(lbs[0],np.zeros(lbs[0].shape),color='gray',lw=2.0,alpha=0.5)
 	plt.legend()
 	plt.xlabel(r'$\log(M_{V}\ [h^{-1}M_{\odot}])$')
@@ -256,7 +271,7 @@ def plothm(l = lrep, sn = 28, nbin = 15, rm = [8, 10], anaf = hmf0, boxs = 4.0):
 	plt.tight_layout()
 	#plt.suptitle(r'Halo mass function at $z=$'+str(int(z*100)/100),size=14)
 	plt.savefig('dhmass_'+str(sn)+'.pdf')
-	plt.show()
+	#plt.show()
 		
 rec_default = [[1,1,1]]*1+[np.array([0.3783187, 0.3497985, 0.399293243])*4000]
 
@@ -341,7 +356,7 @@ def cosweb(sn, indm, data, rep = './', ax = [0, 1], rec0 = rec_default, mode = 0
 	return ds
 	
 
-def phase(sn = 50, rep = './', indm = 0, edge = [0.01, 100.0], base = 'snapshot', ext = '.hdf5'):
+def phase(sn = 50, rep = './', indm = 0, edge = [0.01, 100.0], base = 'snapshot', ext = '.hdf5', nump=1e7, mode=0):
 	ds = yt.load(rep+base+'_'+str(sn).zfill(3)+ext)
 	ad = ds.all_data()
 	keys = ds.field_list
@@ -349,123 +364,142 @@ def phase(sn = 50, rep = './', indm = 0, edge = [0.01, 100.0], base = 'snapshot'
 	if tag>0:
 		num_sink = len(ad[('PartType3','Masses')])
 		print('Number of sink particles: {}'.format(num_sink))
-	nd = ad[('PartType0','density')].to_equivalent("cm**-3", "number_density",mu=mmw(ad[('PartType0','Primordial HII')]))
-	lT = temp(ad[('PartType0','InternalEnergy')],ad[('PartType0','Primordial HII')])
-	lxh = ad[('PartType0','Primordial H2')]
-	lxhd = ad[('PartType0','Primordial HD')]
-	lxe = ad[('PartType0','Primordial e-')]
-	lMBE = MBE(lT, nd, lxe)
-	lne = lxe*nd
-	Mres = 32*ad[('PartType0','Masses')][0].to('Msun')
+	nhd = np.array(ad[('PartType0', 'Density')].to('g/cm**3'))*0.76/PROTON
+	sel = np.random.choice(len(nhd), min(int(nump),len(nhd)),replace=False)
+	nhd = nhd[sel]
+	lT = temp(ad[('PartType0','InternalEnergy')][sel],ad[('PartType0','Primordial HII')][sel])
 
+	Mres = 32*ad[('PartType0','Masses')][0].to('Msun')
 	racc = np.array((Mres*UM/1e10/(4*np.pi*1e2*1.22*PROTON/3))**(1/3)/UL)
 	print('Accretion radius: {} kpc'.format(racc))
+	dens = nhd > 1e4
+	if np.sum(dens)>0:
+		Tdens = np.max(lT[dens])
+		print('Tmax (for n > 10^4 cm^-3): ',Tdens)
 
 	rT = [0.99,6.5]#np.percentile(np.log10(lT), edge)
 	rn = [-5.0,4.0]#np.percentile(np.log10(nd), edge)
-	rx = np.percentile(np.log10(lxh), edge)
-	rxd = np.percentile(np.log10(lxhd), edge)
-	rxd[0] = max(rxd[0], -11)
-	rxe = np.percentile(np.log10(lxe), edge)
-	rne = np.percentile(np.log10(lne), edge)
-	rMBE = np.percentile(np.log10(lMBE), edge)
-	print(np.max(nd))
+	rx = [-12., -2.0]#np.percentile(np.log10(lxh), edge)
+	rxd = [-12., -2.0]#np.percentile(np.log10(lxhd), edge)
+	#rxd[0] = max(rxd[0], -11)
+	rxe = [-5, 0.2]#np.percentile(np.log10(lxe), edge)
+	rne = [-8, 4]#np.percentile(np.log10(lne), edge)
+	rMBE = [4, 11] #np.percentile(np.log10(lMBE), edge)
+	#print(np.max(nd), np.max(nhd))
 
+	nth = 2.e3
+	nthHII = 1e3
+	TBH = np.log10([7e3, 1e4])
 	plt.figure()
 	plt.subplot(111)
-	plt.hist2d(np.log10(lT),np.log10(lxh),bins=100,norm=LogNorm(),range=[rT,rx])
-	cb = plt.colorbar()
-	cb.set_label(r'$\log(N)$')
-	plt.ylabel(r'$\log([\mathrm{H_{2}/H}])$')
-	plt.xlabel(r'$\log(T\ [\mathrm{K}])$')
-	plt.title(r'$[\mathrm{H_{2}/H}]-T$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
-	plt.tight_layout()
-	plt.savefig(rep+'XH2T_'+lmodel[indm]+'_'+str(sn)+'.pdf')
-
-	plt.figure()
-	plt.subplot(111)
-	plt.hist2d(np.log10(lne),np.log10(lT),bins=100,norm=LogNorm(),range=[rne,rT])
-	plt.plot(rne,np.log10([2.73*ds['Redshift'],2.73*ds['Redshift']]),'k:',label='CMB')
-	plt.legend()
+	plt.hist2d(np.log10(nhd),np.log10(lT),bins=100,norm=LogNorm(),range=[rn,rT])
+	#plt.plot(np.log10([nth, nth]), rT, 'k--')#, label='$n_{\mathrm{H,th}}(\mathrm{BH})$')
+	plt.plot(np.log10([nthHII, nthHII]), rT, 'k-.')
+	#plt.fill_between(rn, [TBH[0]]*2, [TBH[1]]*2, facecolor='k', alpha = 0.5)#, label='BH')
+	#plt.plot(rn,np.log10([2.73*ds['Redshift'],2.73*ds['Redshift']]),'k:',label='CMB')
+	#plt.legend()
 	cb = plt.colorbar()
 	cb.set_label(r'$\log(N)$')
 	cb.set_clim(1.0,1e6)
-	plt.xlabel(r'$\log(n_{e}\ [\mathrm{cm^{-3}}])$')
-	plt.ylabel(r'$\log(T\ [\mathrm{K}])$')
-	#plt.title(r'$T-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
-	plt.tight_layout()
-	plt.savefig(rep+'Tne_'+lmodel[indm]+'_'+str(sn)+'.pdf')
-
-	plt.figure()
-	plt.subplot(111)
-	plt.hist2d(np.log10(nd),np.log10(lT),bins=100,norm=LogNorm(),range=[rn,rT])
-	plt.plot(rn,np.log10([2.73*ds['Redshift'],2.73*ds['Redshift']]),'k:',label='CMB')
-	plt.legend()
-	cb = plt.colorbar()
-	cb.set_label(r'$\log(N)$')
-	cb.set_clim(1.0,1e6)
-	plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
+	#plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
+	plt.xlabel(r'$\log(n_{\mathrm{H}}\ [\mathrm{cm^{-3}}])$')
 	plt.ylabel(r'$\log(T\ [\mathrm{K}])$')
 	#plt.title(r'$T-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
 	plt.tight_layout()
 	plt.savefig(rep+'Tn_'+lmodel[indm]+'_'+str(sn)+'.pdf')
-	#plt.show()
-	plt.figure()
-	plt.subplot(111)
-	plt.hist2d(np.log10(nd),np.log10(lxh),bins=100,norm=LogNorm(),range=[rn,rx])
-	cb = plt.colorbar()
-	cb.set_label(r'$\log(N)$')
-	plt.ylabel(r'$\log([\mathrm{H_{2}/H}])$')
-	plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
-	plt.title(r'$[\mathrm{H_{2}/H}]-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
-	plt.tight_layout()
-	plt.savefig(rep+'XH2n_'+lmodel[indm]+'_'+str(sn)+'.pdf')
-	#plt.show()
-	plt.figure()
-	plt.subplot(111)
-	plt.hist2d(np.log10(nd),np.log10(lxhd),bins=100,norm=LogNorm(),range=[rn,rxd])
-	cb = plt.colorbar()
-	cb.set_label(r'$\log(N)$')
-	plt.ylabel(r'$\log([\mathrm{HD/D}])$')
-	plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
-	plt.title(r'$[\mathrm{HD/D}]-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
-	plt.tight_layout()
-	plt.savefig(rep+'XHDn_'+lmodel[indm]+'_'+str(sn)+'.pdf')
-	#plt.show()
-	plt.figure()
-	plt.subplot(111)
-	plt.hist2d(np.log10(nd),np.log10(lxe),bins=100,norm=LogNorm(),range=[rn,rxe])
-	cb = plt.colorbar()
-	cb.set_label(r'$\log(N)$')
-	plt.ylabel(r'$\log([\mathrm{e^{-}/H}])$')
-	plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
-	plt.title(r'$[\mathrm{e^{-}/H}]-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
-	plt.tight_layout()
-	plt.savefig(rep+'Xen_'+lmodel[indm]+'_'+str(sn)+'.pdf')
-	#plt.show()
-	plt.figure()
-	plt.subplot(111)
-	plt.hist2d(np.log10(lT),np.log10(lxe),bins=100,norm=LogNorm(),range=[rT,rxe])
-	cb = plt.colorbar()
-	cb.set_label(r'$\log(N)$')
-	plt.ylabel(r'$\log([\mathrm{e^{-}/H}])$')
-	plt.xlabel(r'$\log(T\ [\mathrm{K}])$')
-	plt.title(r'$[\mathrm{e^{-}/H}]-T$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
-	plt.tight_layout()
-	plt.savefig(rep+'XeT_'+lmodel[indm]+'_'+str(sn)+'.pdf')
+
+	#"""
+	if mode>0:
+		nd = ad[('PartType0','density')][sel].to_equivalent("cm**-3", "number_density",mu=mmw(ad[('PartType0','Primordial HII')][sel]))
+		lxh = ad[('PartType0','Primordial H2')][sel]
+		lxhd = ad[('PartType0','Primordial HD')][sel]
+		lxe = ad[('PartType0','Primordial e-')][sel]
+		lMBE = MBE(lT, nd, lxe)
+		lne = lxe*nd
 	
-	plt.figure()
-	plt.subplot(111)
-	plt.hist2d(np.log10(nd),np.log10(lMBE),bins=100,norm=LogNorm(),range=[rn,rMBE])
-	cb = plt.colorbar()
-	cb.set_label(r'$\log(N)$')
-	plt.plot(rn,np.log10([Mres,Mres]),label=r'$M_{\mathrm{res}}$',color='k')
-	plt.ylabel(r'$\log(M_{\mathrm{BE}}\ [M_{\odot}])$')
-	plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
-	plt.title(r'$M_{\mathrm{BE}}-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
-	plt.tight_layout()
-	plt.savefig(rep+'MBEn_'+lmodel[indm]+'_'+str(sn)+'.pdf')
-	#plt.show()
+		plt.figure()
+		plt.subplot(111)
+		plt.hist2d(np.log10(lT),np.log10(lxh),bins=100,norm=LogNorm(),range=[rT,rx])
+		cb = plt.colorbar()
+		cb.set_label(r'$\log(N)$')
+		plt.ylabel(r'$\log([\mathrm{H_{2}/H}])$')
+		plt.xlabel(r'$\log(T\ [\mathrm{K}])$')
+		plt.title(r'$[\mathrm{H_{2}/H}]-T$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
+		plt.tight_layout()
+		plt.savefig(rep+'XH2T_'+lmodel[indm]+'_'+str(sn)+'.pdf')
+
+		plt.figure()
+		plt.subplot(111)
+		plt.hist2d(np.log10(lne),np.log10(lT),bins=100,norm=LogNorm(),range=[rne,rT])
+		plt.plot(rne,np.log10([2.73*ds['Redshift'],2.73*ds['Redshift']]),'k:',label='CMB')
+		plt.legend()
+		cb = plt.colorbar()
+		cb.set_label(r'$\log(N)$')
+		cb.set_clim(1.0,1e6)
+		plt.xlabel(r'$\log(n_{e}\ [\mathrm{cm^{-3}}])$')
+		plt.ylabel(r'$\log(T\ [\mathrm{K}])$')
+		#plt.title(r'$T-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
+		plt.tight_layout()
+		plt.savefig(rep+'Tne_'+lmodel[indm]+'_'+str(sn)+'.pdf')
+
+		#plt.show()
+		plt.figure()
+		plt.subplot(111)
+		plt.hist2d(np.log10(nd),np.log10(lxh),bins=100,norm=LogNorm(),range=[rn,rx])
+		cb = plt.colorbar()
+		cb.set_label(r'$\log(N)$')
+		plt.ylabel(r'$\log([\mathrm{H_{2}/H}])$')
+		plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
+		plt.title(r'$[\mathrm{H_{2}/H}]-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
+		plt.tight_layout()
+		plt.savefig(rep+'XH2n_'+lmodel[indm]+'_'+str(sn)+'.pdf')
+		#plt.show()
+		plt.figure()
+		plt.subplot(111)
+		plt.hist2d(np.log10(nd),np.log10(lxhd),bins=100,norm=LogNorm(),range=[rn,rxd])
+		cb = plt.colorbar()
+		cb.set_label(r'$\log(N)$')
+		plt.ylabel(r'$\log([\mathrm{HD/D}])$')
+		plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
+		plt.title(r'$[\mathrm{HD/D}]-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
+		plt.tight_layout()
+		plt.savefig(rep+'XHDn_'+lmodel[indm]+'_'+str(sn)+'.pdf')
+		#plt.show()
+		plt.figure()
+		plt.subplot(111)
+		plt.hist2d(np.log10(nd),np.log10(lxe),bins=100,norm=LogNorm(),range=[rn,rxe])
+		cb = plt.colorbar()
+		cb.set_label(r'$\log(N)$')
+		plt.ylabel(r'$\log([\mathrm{e^{-}/H}])$')
+		plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
+		plt.title(r'$[\mathrm{e^{-}/H}]-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
+		plt.tight_layout()
+		plt.savefig(rep+'Xen_'+lmodel[indm]+'_'+str(sn)+'.pdf')
+		#plt.show()
+		plt.figure()
+		plt.subplot(111)
+		plt.hist2d(np.log10(lT),np.log10(lxe),bins=100,norm=LogNorm(),range=[rT,rxe])
+		cb = plt.colorbar()
+		cb.set_label(r'$\log(N)$')
+		plt.ylabel(r'$\log([\mathrm{e^{-}/H}])$')
+		plt.xlabel(r'$\log(T\ [\mathrm{K}])$')
+		plt.title(r'$[\mathrm{e^{-}/H}]-T$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
+		plt.tight_layout()
+		plt.savefig(rep+'XeT_'+lmodel[indm]+'_'+str(sn)+'.pdf')
+	
+		plt.figure()
+		plt.subplot(111)
+		plt.hist2d(np.log10(nd),np.log10(lMBE),bins=100,norm=LogNorm(),range=[rn,rMBE])
+		cb = plt.colorbar()
+		cb.set_label(r'$\log(N)$')
+		plt.plot(rn,np.log10([Mres,Mres]),label=r'$M_{\mathrm{res}}$',color='k')
+		plt.ylabel(r'$\log(M_{\mathrm{BE}}\ [M_{\odot}])$')
+		plt.xlabel(r'$\log(n\ [\mathrm{cm^{-3}}])$')
+		plt.title(r'$M_{\mathrm{BE}}-n$ phase diagram for '+lmodel[indm]+' at $z=$'+str(int(ds['Redshift']*100)/100),size=12)
+		plt.tight_layout()
+		plt.savefig(rep+'MBEn_'+lmodel[indm]+'_'+str(sn)+'.pdf')
+		#plt.show()
+	#"""
 	
 	return ds
 
@@ -487,19 +521,19 @@ def sinks(ntask = 4, rep = 'sink/', base = 'sink', ext = '.txt', mode=0):
 	return out
 
 if __name__ == "__main__":
-	sn = int(sys.argv[1])
-	if len(sys.argv)<3:
-		model = 1
-	else:
-		model = int(sys.argv[2])
+	#sn = int(sys.argv[1])
+	#if len(sys.argv)<3:
+	#	model = 1
+	#else:
+	#	model = int(sys.argv[2])
 	#data = loaddata(sn,sn)
 	#ds = cosweb(sn, model, data, mode = -1, norm = 1e6, nb = 500)
 	#ds = cosweb(sn, model, data, ax = [1,2], norm = 1e6, mode = -1, nb = 500)
 	#ds = cosweb(sn, model, data, ax = [2,0], norm = 1e6, mode = -1, nb = 500)
-	ds = phase(sn,indm=model)
+	#ds = phase(sn,indm=model)
 	fac0 = 1.0 #0.3783187*0.3497985*0.399293243
 	#lm = halom(sn, indm = model, fac = fac0)
-	#plothm(sn=19)
+	plothm(sn=19)
 
 	"""
 	from radio import *

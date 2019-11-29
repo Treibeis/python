@@ -40,6 +40,7 @@ def mmw(xeH = XeH, xeHe = XeHe, X = Hfrac):
 UL = 3.085678e21
 #UL = 1.0
 UM = 1.989e43
+Msun = UM/1e10
 #UM = 1.0
 UV = 1.0e5
 #UV = 1.0
