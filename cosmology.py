@@ -130,4 +130,8 @@ def Lvir(m = 1e10, z = 10.0, delta = 200):
 def Tvir(m = 1e10, z = 10.0, delta = 200):
 	M = m*UM/1e10
 	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
-	return 3*GRA*M*mmw()*PROTON/Rvir/5/(3*BOL)
+	return GRA*M*mmw()*PROTON/Rvir/(3*BOL) # *3/5
+	
+def M_Tvir(T, z = 10.0, delta = 200, xe=0):
+	y = 3*T*BOL*(3/(4*np.pi*delta*rhom(1/(1+z))))**(1/3)/GRA/(mmw(xe)*PROTON)
+	return y**1.5
