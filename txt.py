@@ -22,7 +22,20 @@ def restr(s, k = 0):
 			j = j+1
 	return out
 
-def retxt(s, n, k = 1, t = 1):
+def refloat(s, k = 0):
+	out = []
+	j = 0
+	with open(s, 'r') as f:
+		for line in f:
+			lst = line.split()
+			if j<k:
+				a=1#print (lst[0])
+			else:
+				out.append(np.array([float(x) for x in lst]))
+			j = j+1
+	return out
+
+def retxt(s, n, k = 0, t = 0):
 	out = []
 	for i in range(n):
 		out.append([])
@@ -79,6 +92,19 @@ def totxt(s, l, ls = 0, t = 0, k = 0):
 			else:
 				for s in range(len(l)):
 					f.write(str(l[s][i]))
+					f.write(' ')
+				f.write('\n')
+			j = j+1
+
+def torow(s, l, k=0):
+	j = 0
+	with open(s, 'w') as f:
+		for row in l:
+			if j<k:
+				print(row)
+			else:
+				for d in row:
+					f.write(str(d))
 					f.write(' ')
 				f.write('\n')
 			j = j+1
