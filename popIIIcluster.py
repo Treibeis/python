@@ -34,8 +34,32 @@ def tdyn(M, R):
 	m = M*Msun
 	return (r**3/(GRA*m))**0.5/YR
 
-def trelax(N, M, R, gamma = 0.11):
-	return 0.138*N/np.log(gamma*N) * tdyn(M, R)
+def trelax_(N, M, R, gamma = 0.11, fac = 0.138):
+	N_ = gamma*N
+	return fac*N/np.log(N_) * tdyn(M, R)
+
+def trelax(N, M, R):
+	y1 = 0.138*N/np.log(0.11*N) * tdyn(M, R)
+	y2 = 3.33392239*N/np.log(N) * tdyn(M, R)
+	return y1 * (N>10) + y2 * (N<=10)
+
+"""
+lN = np.geomspace(2, 1000.0, 100)
+lt1 = trelax(lN, 1, 1)/tdyn(1, 1)
+lt2 = trelax_(lN, 1, 1, 1, 0.1)/tdyn(1,1)
+lt3 = trelax_(lN, 1, 1)/tdyn(1, 1)
+plt.figure()
+plt.plot(lN, lt1)
+plt.plot(lN, lt2, '--')
+plt.plot(lN, lt3, '-.')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'$N$')
+plt.ylabel(r'$t_{\rm relax}/t_{\rm dyn}$')
+plt.tight_layout()
+plt.savefig('trelax_N.pdf')
+plt.close()
+"""
 
 def tdecay(M, R):
 	return 14*R**1.5*M**-0.5
@@ -61,22 +85,29 @@ def Mbar(tf, ta):
 	
 def Mmax(tf, ta, alp, Mmin = 1, mode=0):
 	Mb = Mbar(tf, ta)
-	if alp!=-1:
+	if alp!=-1 and alp!=-2:
 		def f(m):
 			out = (alp+1)/(alp+2)
 			out *= m**(alp+2)-Mmin**(alp+2)
 			out /= m**(alp+1)-Mmin**(alp+1)
 			return out - Mb
-	else:
+	elif alp==-1:
 		def f(m):
 			out = (m - Mmin)/(np.log(m/Mmin))
+			return out - Mb
+	else:
+		def f(m):
+			out = np.log(m/Mmin)/(1/Mmin - 1/m)
 			return out - Mb
 	sol = root(f, 10*Mmin)
 	if mode>0:
 		Mm = min(sol.x[0], M_t(ta))
 	else:
 		Mm = sol.x[0]
-	A = M_t(ta)*(alp+2)/(Mm**(alp+2)-Mmin**(alp+2))
+	if alp!=-2:
+		A = M_t(ta)*(alp+2)/(Mm**(alp+2)-Mmin**(alp+2))
+	else:
+		A = M_t(ta)/np.log(Mm/Mmin)
 	return Mm, A
 	
 def IMF(tf, ta, alp, Mmin = 1, nb = 100):
@@ -261,13 +292,14 @@ if __name__=="__main__":
 	a5 = plotref(SA16, 1, 'D', 'r', 'Stacy+2016', 'none', zo=6)
 	a6 = plotref(HS17, 1, 'H', 'pink', 'Hirano+2017', zo=7)
 	a7 = plotref(HT20, 1, '*', oi[ci], 'Hosogawa+2020', 'none', zo=9)
-	a8 = plotref(SD20, 1, 'p', 'cyan', 'Skinner+2020', 'none', mode = 1, zo=8)
+	#a8 = plotref(SD20, 1, 'p', 'cyan', 'Skinner+2020', 'none', mode = 1, zo=8)
 	plt.ylabel(r'$N_{\star}$', size=14)
 	#plt.xlabel(r'$t,\ \tau(4\pi G\rho_{\rm ad})^{1/2}\ [\mathrm{yr}]$', size=14)
 	plt.ylim(1, 1e4)
 	#plt.legend(loc=2, fontsize=12)
-	llab = ('Stacy+2010, 12', 'Greif+2012', 'Stacy+2013', 'Susa+2014', 'Machida+2015', 'Stacy+2016', 'Hirano+2017', 'Hosogawa+2020', 'Skinner+2020')
-	plt.legend((a0, a1, a2, a3, a4, a5, a6, a7, a8), llab,
+	llab = ('Stacy+2010, 12', 'Greif+2012', 'Stacy+2013', 'Susa+2014', 'Machida+2015', 'Stacy+2016', 'Hirano+2017', 'Sugimura+2020', 'Skinner+2020')
+	#plt.legend((a0, a1, a2, a3, a4, a5, a6, a7, a8), llab,
+	plt.legend((a0, a1, a2, a3, a4, a5, a6, a7), llab,
 		bbox_to_anchor=(0., 0., .97, .97), loc=2, ncol=2, borderaxespad=0.)#mode="expand"
 	plt.subplot(222)
 	plt.loglog(lt, M_t(lt), 'k', zorder=0)
@@ -286,8 +318,8 @@ if __name__=="__main__":
 	plotref(SA16_, 2, 'D', 'r', fs='none', zo=6)
 	plotref(HS17, 2, 'H', 'pink', mode=0, zo=7)
 	plotref(HS17_, 2, 'H', 'pink', mf=0, zo=7)
-	plotref(SD20, 2, 'p', 'cyan', fs='none', mode = 1, zo=8)
-	plotref(SD20_, 2, 'p', 'cyan', fs='none', mode = 1, zo=8)
+	#plotref(SD20, 2, 'p', 'cyan', fs='none', mode = 1, zo=8)
+	#plotref(SD20_, 2, 'p', 'cyan', fs='none', mode = 1, zo=8)
 	plotref(HT20, 2, '*', oi[ci], fs='none', zo=9)
 	plotref(HT20_, 2, '*', oi[ci], fs='none', zo=9)
 	plt.ylabel(r'$M\ [\mathrm{M}_{\odot}]$', size=14)
@@ -311,12 +343,13 @@ if __name__=="__main__":
 	plotref(SA16_, 3, 'D', 'r', fs='none', zo=6)
 	plotref(HS17, 3, 'H', 'pink', zo=7)
 	plotref(HS17_, 3, 'H', 'pink', mf=0, zo=7)
-	plotref(SD20, 3, 'p', 'cyan', fs='none', mode = 1, zo=8)
-	plotref(SD20_, 3, 'p', 'cyan', fs='none', mode = 1, zo=8)
+	#plotref(SD20, 3, 'p', 'cyan', fs='none', mode = 1, zo=8)
+	#plotref(SD20_, 3, 'p', 'cyan', fs='none', mode = 1, zo=8)
 	plotref(HT20, 3, '*', oi[ci], fs='none', zo=9)
 	plotref(HT20_, 3, '*', oi[ci], fs='none', zo=9)
-	plt.ylabel(r'$R\ [\mathrm{AU}]$', size=14)
-	plt.xlabel(r'$t,\ \tau(4\pi G\rho_{\rm ad})^{-1/2}\ [\mathrm{yr}]$', size=14)
+	plt.ylabel(r'$R_{c}\ [\mathrm{AU}]$', size=14)
+	#plt.xlabel(r'$t,\ \tau(4\pi G\rho_{\rm ad})^{-1/2}\ [\mathrm{yr}]$', size=14)
+	plt.xlabel(r'$t\ [\rm yr]$')
 	plt.ylim(0.1, 1e6)
 	plt.subplot(224)
 	plt.loglog(lt, Mbar(lt, lt), 'k', label=r'$t_{\rm frag}=t_{\rm acc}$', zorder=0)
@@ -333,8 +366,8 @@ if __name__=="__main__":
 	plotref(SA16_, 4, 'D', 'r', fs='none', zo=6)
 	plotref(HS17, 4, 'H', 'pink', mode=0, zo=7)
 	plotref(HS17_, 4, 'H', 'pink', mf=0, zo=7)
-	plotref(SD20, 4, 'p', 'cyan', fs='none', mode = 1, zo=8)
-	plotref(SD20_, 4, 'p', 'cyan', fs='none', mode = 1, zo=8)
+	#plotref(SD20, 4, 'p', 'cyan', fs='none', mode = 1, zo=8)
+	#plotref(SD20_, 4, 'p', 'cyan', fs='none', mode = 1, zo=8)
 	plotref(HT20, 4, '*', oi[ci], fs='none', zo=9)
 	plotref(HT20_, 4, '*', oi[ci], fs='none', zo=9)
 	ltf = [1, 3e1, 1e3]
@@ -345,14 +378,15 @@ if __name__=="__main__":
 			label=r'$t_{\rm frag}='+str(tf)+'\ \mathrm{yr}$', zorder=0)
 		i += 1
 	plt.ylabel(r'$\bar{M}_{\star}\ [\mathrm{M_{\odot}}]$', size=14)
-	plt.xlabel(r'$t,\ \tau(4\pi G\rho_{\rm ad})^{-1/2}\ [\mathrm{yr}]$', size=14)
+	#plt.xlabel(r'$t,\ \tau(4\pi G\rho_{\rm ad})^{-1/2}\ [\mathrm{yr}]$', size=14)
+	plt.xlabel(r'$t\ [\rm yr]$')
 	plt.legend(loc=2, fontsize=12)
 	plt.ylim(1e-2, 1e3)
 	plt.tight_layout()
 	plt.savefig('popIII_t.pdf')
 	plt.close()
 	
-	ltd = tdecay(R_t(lt), M_t(lt))
+	ltd = tdecay(M_t(lt), R_t(lt))
 	plt.figure()
 	plt.loglog(lt, ltd)
 	plt.xlabel(r'$t,\ \tau(4\pi G\rho_{\rm ad})^{-1/2}\ [\mathrm{yr}]$', size=14)
