@@ -52,6 +52,12 @@ UE = UM*UL**2/UT**2
 
 G = GRA*UM*UT**2/UL**3
 
+def midbin(l):
+	return (l[1:]+l[:-1])*0.5
+
+def sumy(l):
+	return np.array([np.min(l), np.max(l), np.average(l), np.median(l)])
+
 def BB_spectrum(nu0, T):
   numax = 50.*BOL*T/PLANCK
   nu = nu0 * (nu0<numax) + numax * (nu0>=numax)
@@ -109,6 +115,15 @@ def T_dm(z, m = 1., T0=2.726):
 	return T0*(1+z) * (z>zc) + Tc*((1+z)/(1+zc))**2 * (z<=zc)
 
 # DM haloes
+def concentration_z(z, m, h=0.6774):
+	# Dutton & Macci¨° 2014, for z = 0-5, logMvir = 10-15
+	a = 0.52 + (0.905-0.52)*np.exp(-0.617*z**1.21) # M200-c200
+	# a = 0.537 + (1.025-0.537)*np.exp(-0.718*z**1.08) # Mvir-cvir
+	b = -0.101 + 0.026*z
+	# b = -0.097 + 0.025*z
+	logc = a + b*np.log10(m*h/1e12)
+	return 10**logc
+
 def tff(z = 10.0, delta = 200):
 	return (3*np.pi/(32*GRA*delta*rhom(1/(1+z))))**0.5
 
