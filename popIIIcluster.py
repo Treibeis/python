@@ -43,7 +43,7 @@ def trelax(N, M, R):
 	y2 = 3.33392239*N/np.log(N) * tdyn(M, R)
 	return y1 * (N>10) + y2 * (N<=10)
 
-"""
+#"""
 lN = np.geomspace(2, 1000.0, 100)
 lt1 = trelax(lN, 1, 1)/tdyn(1, 1)
 lt2 = trelax_(lN, 1, 1, 1, 0.1)/tdyn(1,1)
@@ -59,7 +59,7 @@ plt.ylabel(r'$t_{\rm relax}/t_{\rm dyn}$')
 plt.tight_layout()
 plt.savefig('trelax_N.pdf')
 plt.close()
-"""
+#"""
 
 def tdecay(M, R):
 	return 14*R**1.5*M**-0.5
@@ -174,7 +174,7 @@ def plotref(l, i, fmt, c, lab = None, fs = 'full', mode = 0, mf = 1, zo = 1):
 				label=lab, fmt=fmt, fillstyle=fs, color=c, zorder=zo)
 			plt.scatter(d[0], d[i], marker='.', color=c, alpha=0.5, zorder=1)
 		else:
-			if fs is 'none':
+			if fs=='none':
 				a = plt.scatter(d[0], d[i], marker=fmt, label=lab, fc=fs, ec=c, lw=1, zorder=zo)
 			else:
 				a = plt.scatter(d[0], d[i], marker=fmt, label=lab, fc=c, ec=c, lw=1, zorder=zo)
@@ -182,7 +182,7 @@ def plotref(l, i, fmt, c, lab = None, fs = 'full', mode = 0, mf = 1, zo = 1):
 		if len(d[i])>1:
 			a = plt.errorbar(np.average(d[0]), d[i][0], yerr=d[i][1], fmt=fmt, label=lab, fillstyle=fs, color=c, zorder=zo)
 		else:
-			if fs is 'none':
+			if fs=='none':
 				a = plt.scatter(d[0], d[i], marker=fmt, label=lab, fc=fs, ec=c, lw=1, zorder=zo)
 			else:
 				a = plt.scatter(d[0], d[i], marker=fmt, label=lab, fc=c, ec=c, lw=1, zorder=zo)

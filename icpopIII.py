@@ -386,11 +386,11 @@ def genkepler(nrdm, m, a, e):
 	x = r*ctheta
 	y = r*stheta
 	p = a*(1-e**2)*AU
-	vx = -np.sqrt(GRA*m*Msun/p)*stheta
+	vx = -np.sqrt(GRA*m*Msun/p)*stheta/UV
 	vy = np.sqrt(GRA*m*Msun/p)*(e+ctheta)/UV
 	return [r, x, y, vx, vy]
 
-def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3., wf=wf0, dfa=1e-1, mode=1, fang=0.5, Q = 1, fa2=0, fa1=0):
+def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3., wf=wf0, dfa=1e-1, mode=1, fang=0.5, Q = 1, fa2=0, fa1=0, dfv=0.1):
 	N = len(lm)
 	la = np.zeros(N)
 	le = np.zeros(N)
@@ -460,26 +460,34 @@ def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3., wf=wf
 	for i in range(1, N):
 		if mode==0 or ncp[lind[i]]==0:
 			m1, m2 = lm[i], lm[lind[i]]
-			r, x, y, vx, vy = genkepler(nrdm, m1+m2, la[i], le[i])
+			m = m1+m2
+			r, x, y, vx, vy = genkepler(nrdm, m, la[i], le[i])
+			v = np.sqrt(vx**2+vy**2)
 			z = (nrdm.uniform()-0.5)*dfa*r
+			vz = (nrdm.uniform()-0.5)*dfv*v
 			R = (r**2 - z**2)**0.5
+			vp = (v**2-vz**2)**0.5
 			lpos[i] = lpos[lind[i]] + np.array([x*R/r, y*R/r, z])
-			lvel[i] = lvel[lind[i]] + np.array([vx, vy, 0])
-			lv[i] = np.sqrt(vx**2+vy**2)
+			dvel = np.array([vx*vp/v, vy*vp/v, vz])
+			lvel[i] = lvel[lind[i]] + dvel*m2/m
+			lvel[lind[i]] += - dvel*m1/m
+			lv[i] = v
 		else:
 			if ncp[lind[i]]==0:
 				theta = nrdm.uniform()*2*np.pi
 			else:
 				theta = (lofs[lind[i]] + nrdm.uniform()*fang/ncp[lind[i]] + icp[i]/ncp[lind[i]])*2*np.pi
 			r = la[i]*(1+le[i])
-			z = (nrdm.uniform()-0.5)*dfa*r
-			R = (r**2 - z**2)**0.5
-			x, y = R*np.cos(theta), R*np.sin(theta)
-			lpos[i] = lpos[lind[i]] + np.array([x, y, z])
 			m1, m2 = lm[i], lm[lind[i]]
 			m = m1+m2
 			v = (GRA*m*Msun/(la[i]*AU) * (1.0-le[i])/(1.0+le[i]))**0.5/UV
-			dvel = v * np.array([-np.sin(theta), np.cos(theta), 0])
+			z = (nrdm.uniform()-0.5)*dfa*r
+			vz = (nrdm.uniform()-0.5)*dfv*v
+			R = (r**2 - z**2)**0.5
+			vp = (v**2-vz**2)**0.5
+			x, y = R*np.cos(theta), R*np.sin(theta)
+			lpos[i] = lpos[lind[i]] + np.array([x, y, z])
+			dvel = np.array([-np.sin(theta)*vp, np.cos(theta)*vp, vz])
 			lvel[i] = lvel[lind[i]] + dvel*m2/m
 			lvel[lind[i]] += - dvel*m1/m
 			lv[i] = v
@@ -575,7 +583,7 @@ def plotdisk(d, fn, rep='./', fac=1.5, norm=1314, smin=2, mode=1, log=1, alpha=0
 	plt.savefig(rep+fn)
 	plt.close()
 
-def genic(rep, st=0, n=10, tf=1e2, ta=1e5, alp=-1.0, mmax=5e2, seed=2333, norm=1e8, mode=1, fang=0.5, Q=1, rN=0, dfa=1e-1, fecc=0, rfac=1, mm=1, m10=1, fa2=0, fa1=0, gena=gena0):
+def genic(rep, st=0, n=10, tf=1e2, ta=1e5, alp=-1.0, mmax=5e2, seed=2333, norm=1e8, mode=1, fang=0.5, Q=1, rN=0, dfa=1e-1, dfv=0.1, fecc=0, rfac=1, mm=1, m10=1, fa2=0, fa1=0, gena=gena0):
 	if not os.path.exists(rep):
 		os.makedirs(rep)
 	N0 = int(N_t(tf)+0.5)
@@ -621,6 +629,7 @@ if __name__=='__main__':
 	alp, m10 = -1, 1
 	#dfa = 2.
 	dfa = 1e-1
+	dfv = 1e-1
 	fecc = 1
 	rfac = 1
 	#rfac = R_t(1e1)/R_t(ta) 
@@ -667,7 +676,7 @@ if __name__=='__main__':
 	st = 0 #1000
 	ns = 1000
 	seed = 2333
-	ntot = genic(rep, st, ns, tf, ta, alp, rN=rN, dfa=dfa, mmax=mmax, Q=Q, fecc=fecc, rfac=rfac, mm=mm, m10=m10, seed=seed, fa2=fa2, fa1=fa1, gena=gena)
+	ntot = genic(rep, st, ns, tf, ta, alp, rN=rN, dfa=dfa, mmax=mmax, Q=Q, fecc=fecc, rfac=rfac, mm=mm, m10=m10, seed=seed, fa2=fa2, fa1=fa1, gena=gena, dfv=dfv)
 	print(ntot)
 	
 	test = 0
