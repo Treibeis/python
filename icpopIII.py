@@ -16,19 +16,19 @@ mcoZ5 = np.array([-9.2895961573096897e-01, +9.2331358192538004e-01, +4.794567778
 mcoZ4 = np.array([-9.4823722226647700e-01, +9.7236386558568799e-01, +4.5283017654016999e-01, -1.3877489041026900e-01])
 mcoZ2 = np.array([-7.3806577478145996e-01, +7.0263944811078005e-01, +5.0208830062187804e-01, -1.2376219079451400e-01])
 
-"""
+#"""
 mheZ8 = np.array([-7.2712749189720804e-01, +8.3176655071820205e-01, +4.7853206104410101e-01, -1.3980539673247300e-01])
 mheZ6 = np.array([-5.2437528299791603e-01, +5.5932229149602297e-01, +5.7797948042505098e-01, -1.4589837221339999e-01])
 mheZ5 = np.array([-4.1085136748565099e-01, +4.4292411042459900e-01, +6.2270607618818596e-01, -1.5313454615055200e-01])
 mheZ4 = np.array([-3.9425104148142198e-01, +4.9002611835324500e-01, +5.7239586075853399e-01, -1.4093689615634999e-01])
 mheZ2 = np.array([-3.8303715910210101e-01, +7.0150741599662503e-01, +2.9607706988601801e-01, -5.9315517041934301e-02])
 """
-mheZ8 = np.array([-1.0733886890363700e+00, +1.4584928984676999e+00, +8.1519136854884905e-02, -5.3730041751472800e-02])
-mheZ6 = np.array([-1.1406439008233300e+00, +1.5754309620831299e+00, +1.5150861500077399e-02, -4.1230152708572498e-02])
-mheZ5 = np.array([-1.1011433924550000e+00, +1.5272663127372501e+00, +3.5517282030031301e-02, -4.3877721910985303e-02])
-mheZ4 = np.array([-1.0535947893773301e+00, +1.4170998603813501e+00, +1.2689928777198800e-01, -6.7494753025814203e-02])
-mheZ2 = np.array([-1.2316548227442199e+00, +1.8848911925803100e+00, -2.4609484339633700e-01, +2.2463422369182098e-02])
-#"""
+mheZ8 = np.array([-1.1, 1.5, 0.082, -0.054])
+mheZ6 = np.array([-1.1, 1.6, 0.015, -0.041])
+mheZ5 = np.array([-1.1, 1.5, 0.036, -0.044])
+mheZ4 = np.array([-1.1, 1.4, 0.13, -0.067])
+mheZ2 = np.array([-1.2, 1.9, -0.25, 0.022])
+"""
 
 temsZ8 = np.array([+1.2305856460495901e+00, +1.0134578934187600e+02, +9.1468769124419097e+01, +1.8034769714629199e+03])
 tsgZ8 = np.array([+2.4927377844451301e-01, +2.1430677547749402e+00, +8.5972144678894594e+01, -1.4028396903502400e+02])
@@ -56,32 +56,22 @@ remsZ2 = np.array([-1.4359719418587300e+00, +4.1335756478450900e+00, -2.49408098
 rchebZ2 = np.array([+6.1925984270592203e+00, -9.6076904024682896e+00, +5.6240568009227401e+00, -7.3097573061153098e-01])
 
 lchebZ8 = np.array([+3.8790608169726498e-01, +5.4894852836696097e+00, -1.6450220435261300e+00, +2.0133843339575599e-01])
-lemsZ8 = np.array([+1.8683454969478600e-01, +5.7145070422311797e+00, -1.7657692128941300e+00, +2.2589703362508501e-01])
-lzamsZ8 = np.array([-4.9125370974699000e-03, +4.7854346156440304e+00, -1.0218914733694000e+00, +8.0491993338893300e-02])
 rgb0Z8 = np.array([+1.9892249955808999e-01, -3.7299109886527798e-01])
 rgb1Z8 = np.array([+5.6071811071005395e-01, +3.2722143200640798e-02])
 
-lchebZ6 = np.array([+5.5163281110466300e-01, +5.2726483070966701e+00, -1.5669073962725100e+00, +1.9653692229092701e-01])
-lemsZ6 = np.array([+7.0757975602064205e-02, +5.9547056937739100e+00, -1.9224648832190800e+00, +2.5857233194367901e-01])
-lzamsZ6 = np.array([+8.6457066168576402e-02, +4.5267539598251902e+00, -8.3734602904147404e-01, +4.0772686211378001e-02])
+lchebZ6 = np.array([+5.5163281110466300e-01, +5.2726483070966701e+00, -1.5669073962725100e+00 +1.9653692229092701e-01])
 rgb0Z6 = np.array([-1.1360958843644700e-01, -1.4734021414496001e-01])
 rgb1Z6 = np.array([+6.2134621256327505e-01, -7.9113517758866905e-03])
 
-lchebZ5 = np.array([+8.0634329880297295e-01 +4.7633074342534902e+00 -1.2175693546732000e+00, +1.1848267301948801e-01])
-lemsZ5 = np.array([-6.4010588830543502e-02, +6.1613002916478603e+00, -2.0261739188010601e+00, +2.7603556655566103e-01])
-lzamsZ5 = np.array([+6.1565122879347303e-02, +4.5519847009521301e+00, -8.4909794442826203e-01, +4.2747189247281603e-02])
+lchebZ5 = np.array([+8.0634329880297295e-01 +4.7633074342534902e+00 -1.2175693546732000e+00 +1.1848267301948801e-01])
 rgb0Z5 = np.array([+5.6659069526797702e-02 -2.9401839565042698e-01])
 rgb1Z5 = np.array([+5.9229869792013501e-01 +1.5810282790358201e-02])
 
-lchebZ4 = np.array([+1.0036121148808901e+00, +4.4477153532156501e+00, -1.0517047979711500e+00, +9.0669105159825694e-02])
-lemsZ4 = np.array([-9.5090922675450204e-02, +6.1861769329705298e+00, -2.0227268480957301e+00, +2.7233787294898498e-01])
-lzamsZ4 = np.array([+7.0523683128112099e-03, +4.6392179589624503e+00, -9.0127242744985803e-01, +5.3238721546632901e-02])
+lchebZ4 = np.array([+1.0036121148808901e+00, +4.4477153532156501e+00, -1.0517047979711500e+00 +9.0669105159825694e-02])
 rgb0Z4 = np.array([+9.0940251890292804e-03, -2.3234236135069800e-01])
 rgb1Z4 = np.array([+5.9863657659087000e-01, +6.6527853775347704e-03])
 
-lchebZ2 = np.array([+7.0984159927752299e-01, +5.2269835165592902e+00, -1.6253670199780199e+00, +2.1924040178420401e-01])
-lemsZ2 = np.array([-1.4163054579500700e-01, +6.2468925492728600e+00, -2.0517336248547200e+00, +2.7740223008074300e-01])
-lzamsZ2 = np.array([-4.3387121453610497e-02, +4.7002611105589196e+00, -9.3228362169805801e-01, +5.8811945206418803e-02])
+lchebZ2 = np.array([+7.0984159927752299e-01, +5.2269835165592902e+00, -1.6253670199780199e+00 +2.1924040178420401e-01])
 rgb0Z2 = np.array([-8.7074249061240602e-02, -1.6922018399772801e-01])
 rgb1Z2 = np.array([+6.1896196949691396e-01, -5.7427447948830397e-03])
 
@@ -136,121 +126,21 @@ def tphase(M, fitpara=rzamsZ6, Md=8, Mu=160, log=0, sign=-1):
 	else:
 		return t
 	
-def Mrem(M, mco=mcoZ6, mhe=mheZ6, Md=8, Mu=160, ppisn=1, bh=1):
+def Mrem(M, mco=mcoZ6, mhe=mheZ6, Md=8, Mu=160):
 	MCO = Rzams(M, mco, Md, Mu)
 	MFe = (0.161767*MCO + 1.067055) * (MCO<=2.5)
 	MFe += (0.314154*MCO + 0.686008) * (MCO>2.5)
 	Mr0 = 0
-	colab = (MCO<=5)
-	if bh>0:
-		colab *= (MCO>1.4)
-	Mr0 += MFe * colab
+	Mr0 += MFe * (MCO<=5)*(MCO>1.4)
 	Mr0 += (MFe + (MCO-5)/2.6 * (M-MFe)) * (MCO>5)*(MCO<7.6)
 	Mr0 += M * (MCO>7.6)
 	MHe = Rzams(M, mhe, Md, Mu)
-	#MHe = (1.586 + M**5.25)/(2.434 + 1.02*M**5.25)
 	Mr = 0
 	Mr += Mr0 * np.logical_or(MHe<=45, MHe>135)
-	if ppisn>0:
-		Mr += MCO * (MHe>45) * (MHe<=65)
-	else:
-		Mr += Mr0 * (MHe>45) * (MHe<=65)
+	Mr += 45 * (MHe>45) * (MHe<=65)
 	return Mr
 
-lM = np.geomspace(1, 500, 100)
-
-g8 = np.array([Rzams(m, lzamsZ8, log=1)/m*3.2e-5 for m in lM])
-g6 = np.array([Rzams(m, lzamsZ6, log=1)/m*3.2e-5 for m in lM])
-g5 = np.array([Rzams(m, lzamsZ5, log=1)/m*3.2e-5 for m in lM])
-g4 = np.array([Rzams(m, lzamsZ4, log=1)/m*3.2e-5 for m in lM])
-g2 = np.array([Rzams(m, lzamsZ2, log=1)/m*3.2e-5 for m in lM])
-
-lR8 = np.array([Rzams(m, rzamsZ8) for m in lM])
-lR6 = np.array([Rzams(m, rzamsZ6) for m in lM])
-lR5 = np.array([Rzams(m, rzamsZ5) for m in lM])
-lR4 = np.array([Rzams(m, rzamsZ4) for m in lM])
-lR2 = np.array([Rzams(m, rzamsZ2) for m in lM])
-v8 = (2*(1-g8)*GRA*lM*Msun/(lR8*Rsun))**0.5
-v6 = (2*(1-g6)*GRA*lM*Msun/(lR6*Rsun))**0.5
-v5 = (2*(1-g5)*GRA*lM*Msun/(lR5*Rsun))**0.5
-v4 = (2*(1-g4)*GRA*lM*Msun/(lR4*Rsun))**0.5
-v2 = (2*(1-g2)*GRA*lM*Msun/(lR2*Rsun))**0.5
-plt.figure()
-plt.loglog(lM, v8/1e5, label=r'$\log(Z/\rm Z_{\odot})=-8$')
-plt.loglog(lM, v6/1e5, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
-plt.loglog(lM, v5/1e5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
-plt.loglog(lM, v4/1e5, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
-plt.loglog(lM, v2/1e5, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
-plt.ylabel(r'$v_{\rm esc}\ [\rm km\ s^{-1}]$')
-plt.legend()
-plt.title('Zero age main sequence')
-plt.tight_layout()
-plt.savefig('vwZAMS_M.pdf')
-plt.close()
-	
-g8 = np.array([Rzams(m, lemsZ8, log=1)/m*3.2e-5 for m in lM])
-g6 = np.array([Rzams(m, lemsZ6, log=1)/m*3.2e-5 for m in lM])
-g5 = np.array([Rzams(m, lemsZ5, log=1)/m*3.2e-5 for m in lM])
-g4 = np.array([Rzams(m, lemsZ4, log=1)/m*3.2e-5 for m in lM])
-g2 = np.array([Rzams(m, lemsZ2, log=1)/m*3.2e-5 for m in lM])
-	
-lR8 = np.array([Rzams(m, remsZ8) for m in lM])
-lR6 = np.array([Rzams(m, remsZ6) for m in lM])
-lR5 = np.array([Rzams(m, remsZ5) for m in lM])
-lR4 = np.array([Rzams(m, remsZ4) for m in lM])
-lR2 = np.array([Rzams(m, remsZ2) for m in lM])
-v8 = (2*(1-g8)*GRA*lM*Msun/(lR8*Rsun))**0.5
-v6 = (2*(1-g6)*GRA*lM*Msun/(lR6*Rsun))**0.5
-v5 = (2*(1-g5)*GRA*lM*Msun/(lR5*Rsun))**0.5
-v4 = (2*(1-g4)*GRA*lM*Msun/(lR4*Rsun))**0.5
-v2 = (2*(1-g2)*GRA*lM*Msun/(lR2*Rsun))**0.5
-plt.figure()
-plt.loglog(lM, v8/1e5, label=r'$\log(Z/\rm Z_{\odot})=-8$')
-plt.loglog(lM, v6/1e5, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
-plt.loglog(lM, v5/1e5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
-plt.loglog(lM, v4/1e5, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
-plt.loglog(lM, v2/1e5, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
-plt.ylabel(r'$v_{\rm esc}\ [\rm km\ s^{-1}]$')
-plt.legend()
-plt.title('End of main sequence')
-plt.tight_layout()
-plt.savefig('vwEMS_M.pdf')
-plt.close()
-	
-g8 = np.array([Rzams(m, lchebZ8, log=1)/m*3.2e-5 for m in lM])
-g6 = np.array([Rzams(m, lchebZ6, log=1)/m*3.2e-5 for m in lM])
-g5 = np.array([Rzams(m, lchebZ5, log=1)/m*3.2e-5 for m in lM])
-g4 = np.array([Rzams(m, lchebZ4, log=1)/m*3.2e-5 for m in lM])
-g2 = np.array([Rzams(m, lchebZ2, log=1)/m*3.2e-5 for m in lM])
-	
-lR8 = np.array([Rrgb(m, rgb0Z8, rgb1Z8, lchebZ8, rchebZ8, 50, 16) for m in lM])
-lR6 = np.array([Rrgb(m, rgb0Z6, rgb1Z6, lchebZ6, rchebZ6, 50, 16) for m in lM])
-lR5 = np.array([Rrgb(m, rgb0Z5, rgb1Z5, lchebZ5, rchebZ5, 50, 16) for m in lM])
-lR4 = np.array([Rrgb(m, rgb0Z4, rgb1Z4, lchebZ4, rchebZ4, 50, 16) for m in lM])
-lR2 = np.array([Rrgb(m, rgb0Z2, rgb1Z2, lchebZ2, rchebZ2, 100, 16) for m in lM])
-v8 = (2*GRA*lM*Msun/(lR8*Rsun))**0.5
-v6 = (2*GRA*lM*Msun/(lR6*Rsun))**0.5
-v5 = (2*GRA*lM*Msun/(lR5*Rsun))**0.5
-v4 = (2*GRA*lM*Msun/(lR4*Rsun))**0.5
-v2 = (2*GRA*lM*Msun/(lR2*Rsun))**0.5
-plt.figure()
-plt.loglog(lM, v8/1e5, label=r'$\log(Z/\rm Z_{\odot})=-8$')
-plt.loglog(lM, v6/1e5, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
-plt.loglog(lM, v5/1e5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
-plt.loglog(lM, v4/1e5, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
-plt.loglog(lM, v2/1e5, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
-plt.ylabel(r'$v_{\rm esc}\ [\rm km\ s^{-1}]$')
-plt.title('End of core He burning')
-plt.legend()
-plt.tight_layout()
-plt.savefig('vwEHeB_M.pdf')
-plt.close()
-
-	
-#"""
+"""	
 lM = np.geomspace(1, 500, 100)
 lR8 = [Rzams(m, rzamsZ8) for m in lM]
 lR6 = [Rzams(m, rzamsZ6) for m in lM]
@@ -263,13 +153,12 @@ plt.loglog(lM, lR6, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
 plt.loglog(lM, lR5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
 plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$R_{\star}\ [\rm R_{\odot}]$')
 plt.tight_layout()
 plt.legend()
 plt.savefig('RZAMS_M.pdf')
 plt.close()
-
 
 lM = np.geomspace(1, 500, 100)
 lR8 = [Rzams(m, remsZ8) for m in lM]
@@ -283,7 +172,7 @@ plt.loglog(lM, lR6, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
 plt.loglog(lM, lR5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
 plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$R_{\star}\ [\rm R_{\odot}]$')
 plt.tight_layout()
 plt.legend()
@@ -291,18 +180,18 @@ plt.savefig('REMS_M.pdf')
 plt.close()
 
 lM = np.geomspace(1, 500, 100)
-lR8 = [Rrgb(m, rgb0Z8, rgb1Z8, lchebZ8, rchebZ8, 50, 16) for m in lM]
-lR6 = [Rrgb(m, rgb0Z6, rgb1Z6, lchebZ6, rchebZ6, 50, 16) for m in lM]
-lR5 = [Rrgb(m, rgb0Z5, rgb1Z5, lchebZ5, rchebZ5, 50, 16) for m in lM]
-lR4 = [Rrgb(m, rgb0Z4, rgb1Z4, lchebZ4, rchebZ4, 50, 16) for m in lM]
-lR2 = [Rrgb(m, rgb0Z2, rgb1Z2, lchebZ2, rchebZ2, 100, 16) for m in lM]
+lR8 = [Rrgb(m, rgb0Z8, rgb1Z8, lchebZ8, rchebZ8, 50) for m in lM]
+lR6 = [Rrgb(m, rgb0Z6, rgb1Z6, lchebZ6, rchebZ6, 50) for m in lM]
+lR5 = [Rrgb(m, rgb0Z5, rgb1Z5, lchebZ5, rchebZ5, 50) for m in lM]
+lR4 = [Rrgb(m, rgb0Z4, rgb1Z4, lchebZ4, rchebZ4, 50) for m in lM]
+lR2 = [Rrgb(m, rgb0Z2, rgb1Z2, lchebZ2, rchebZ2, 100) for m in lM]
 plt.figure()
 plt.loglog(lM, lR8, label=r'$\log(Z/\rm Z_{\odot})=-8$')
 plt.loglog(lM, lR6, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
 plt.loglog(lM, lR5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
 plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$R_{\star}\ [\rm R_{\odot}]$')
 plt.tight_layout()
 plt.legend()
@@ -321,7 +210,7 @@ plt.loglog(lM, lR6, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
 plt.loglog(lM, lR5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
 plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$M_{\rm c,CO}\ [\rm M_{\odot}]$')
 plt.tight_layout()
 plt.legend()
@@ -339,7 +228,7 @@ plt.loglog(lM, lR6, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
 plt.loglog(lM, lR5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
 plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$M_{\rm c,He}\ [\rm M_{\odot}]$')
 plt.tight_layout()
 plt.legend()
@@ -357,7 +246,7 @@ plt.loglog(lM, lR6, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
 plt.loglog(lM, lR5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
 plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$t_{\rm EMS}\ [\rm Myr]$')
 plt.tight_layout()
 plt.legend()
@@ -375,7 +264,7 @@ plt.loglog(lM, lR6, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
 plt.loglog(lM, lR5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
 plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$t_{\rm SG}\ [\rm Myr]$')
 plt.tight_layout()
 plt.legend()
@@ -397,7 +286,7 @@ plt.plot(lM, lR6, '--', label=r'$\log(Z/\rm Z_{\odot})=-6$')
 plt.plot(lM, lR5, '-.', label=r'$\log(Z/\rm Z_{\odot})=-5$')
 plt.plot(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.plot(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
-plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$M_{\rm rem}\ [\rm M_{\odot}]$')
 plt.xlim(m1, m2)
 plt.ylim(m1, m2)
@@ -407,7 +296,7 @@ plt.tight_layout()
 plt.legend()
 plt.savefig('Mrem_M.pdf')
 plt.close()
-#"""
+"""
 
 def Alope(R1, q1, e=0):
 	y = (0.6*q1**(2./3) + np.log(1+q1**(1./3))) / (0.49*q1**(2./3))
@@ -417,7 +306,7 @@ def Lpos(q1, e1=1, e2=-1):
 	f = lambda x: (1+q1)*x**5 + (3+2*q1)*x**4 + (3+q1)*x**3 + (1-e1-e2*q1)*x**2 -2*e2*q1*x - e2*q1
 	sol = root(f, -0.1)
 	return -sol.x[0]
-#"""
+"""
 lq1 = np.geomspace(1e-3, 1, 100)
 lL1 = [Lpos(q1) for q1 in lq1]
 llope = [1/Alope(1, q1) for q1 in lq1]
@@ -429,7 +318,7 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('xL1_q1.pdf')
 plt.close()
-#"""
+"""
 def pwimf(alp):
 	imf = lambda m: m**alp
 	return imf
@@ -461,6 +350,9 @@ def masslist(M, N, imf, m1, m2, nb=10000, seed=23333, mmax=5e2, mode=0):
 			m = np.min([10**invF(r), M-mtot, mmax])
 			if count==0:
 				m = min(m, M-m1)
+			#if m<m1 and count>0:
+			#	lM[count-1] += m
+			#	break
 			lM.append(m)
 			mtot += m
 			count += 1
@@ -469,6 +361,11 @@ def masslist(M, N, imf, m1, m2, nb=10000, seed=23333, mmax=5e2, mode=0):
 
 def gena0(a1, a2):
 	return nrdm.uniform()*(a2-a1) + a1
+	#return (a2/a1)**(nrdm.uniform()) * a1
+	
+def gena1(a1, a2):
+	b = np.log(a2/a1)
+	return np.exp(nrdm.uniform()*b + np.log(a1))
 
 def circe():
 	return 0
@@ -478,7 +375,22 @@ def popIed():
 
 wf0 = lambda m: m #**(1./3)
 
-def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3, wf=wf0, dfa=1e-1, mode=1, fang=0.5, Q = 1):
+def genkepler(nrdm, m, a, e):
+	q = nrdm.uniform()
+	ft_E = lambda x: x-e*np.sin(x)-2*np.pi*q
+	sol = root(ft_E, np.pi)
+	E = sol.x[0]
+	r = a*(1-e*np.cos(E))
+	ctheta = (np.cos(E)-e)/(1-e*np.cos(E))
+	stheta = np.sqrt(1. - ctheta**2)*np.sign(nrdm.uniform()-0.5)
+	x = r*ctheta
+	y = r*stheta
+	p = a*(1-e**2)*AU
+	vx = -np.sqrt(GRA*m*Msun/p)*stheta
+	vy = np.sqrt(GRA*m*Msun/p)*(e+ctheta)/UV
+	return [r, x, y, vx, vy]
+
+def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3., wf=wf0, dfa=1e-1, mode=1, fang=0.5, Q = 1, fa2=0, fa1=0):
 	N = len(lm)
 	la = np.zeros(N)
 	le = np.zeros(N)
@@ -491,7 +403,8 @@ def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3, wf=wf0
 	lind[1] = 0
 	ncp[0] = 1
 	nrdm.seed(seed)
-	la[1] = (nrdm.uniform()*dRc + 1-dRc)*Rc
+	#la[1] = (nrdm.uniform()*dRc + 1-dRc)*Rc
+	la[1] = gena(Rc*(1-dRc), Rc)
 	le[1] = gene()
 	for i in range(2, N):
 		lf = np.cumsum(wf(lm[:i])/np.sum(wf(lm[:i])))
@@ -509,10 +422,27 @@ def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3, wf=wf0
 		q1 = lm[ind]/lm[i]
 		a1 = Alope(lR[ind], q1, e)
 		if ind==0:
+			q10 = lm[1]/lm[0]
 			a2 = Rc
+			a20 = (1-Lpos(q10)) * la[1]/(1+e)
 		else:
 			q10 = lm[ind]/lm[lind[ind]]
 			a2 = Lpos(q10) * la[ind]/(1+e)
+			a20 = a2
+		if fa2>0:
+			for k in range(i):
+				if lind[k] == ind:
+					qt = lm[k]/lm[ind]
+					if qt<0.5:
+						continue
+					a2t = (1-Lpos(qt)) * la[k]/(1+e)
+					if a2t/10 < a1:
+						continue
+					if a2t < a2:
+						a2 = a2t
+			a20 = min(a2, a20)
+		if fa1>0:
+			a1 = max(a1, a20/10)
 		la[i] = gena(a1, a2)
 	for i in range(N-1):
 		sel = lind==i
@@ -528,22 +458,31 @@ def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3, wf=wf0
 	lpos = np.zeros((N, 3))
 	lvel = np.zeros((N, 3))
 	for i in range(1, N):
-		r = la[i]*(1+le[i])
-		z = (nrdm.uniform()-0.5)*dfa*r
 		if mode==0 or ncp[lind[i]]==0:
-			theta = nrdm.uniform()*2*np.pi
+			m1, m2 = lm[i], lm[lind[i]]
+			r, x, y, vx, vy = genkepler(nrdm, m1+m2, la[i], le[i])
+			z = (nrdm.uniform()-0.5)*dfa*r
+			R = (r**2 - z**2)**0.5
+			lpos[i] = lpos[lind[i]] + np.array([x*R/r, y*R/r, z])
+			lvel[i] = lvel[lind[i]] + np.array([vx, vy, 0])
+			lv[i] = np.sqrt(vx**2+vy**2)
 		else:
-			theta = (lofs[lind[i]] + nrdm.uniform()*fang/ncp[lind[i]] + icp[i]/ncp[lind[i]])*2*np.pi
-		R = (r**2 - z**2)**0.5
-		x, y = R*np.cos(theta), R*np.sin(theta)
-		lpos[i] = lpos[lind[i]] + np.array([x, y, z])
-		m1, m2 = lm[i], lm[lind[i]]
-		m = m1+m2
-		v = (GRA*m*Msun/(la[i]*AU) * (1.0-le[i])/(1.0+le[i]))**0.5/UV
-		dvel = v * np.array([-np.sin(theta), np.cos(theta), 0])
-		lvel[i] = lvel[lind[i]] + dvel*m2/m
-		lvel[lind[i]] += - dvel*m1/m
-		lv[i] = v
+			if ncp[lind[i]]==0:
+				theta = nrdm.uniform()*2*np.pi
+			else:
+				theta = (lofs[lind[i]] + nrdm.uniform()*fang/ncp[lind[i]] + icp[i]/ncp[lind[i]])*2*np.pi
+			r = la[i]*(1+le[i])
+			z = (nrdm.uniform()-0.5)*dfa*r
+			R = (r**2 - z**2)**0.5
+			x, y = R*np.cos(theta), R*np.sin(theta)
+			lpos[i] = lpos[lind[i]] + np.array([x, y, z])
+			m1, m2 = lm[i], lm[lind[i]]
+			m = m1+m2
+			v = (GRA*m*Msun/(la[i]*AU) * (1.0-le[i])/(1.0+le[i]))**0.5/UV
+			dvel = v * np.array([-np.sin(theta), np.cos(theta), 0])
+			lvel[i] = lvel[lind[i]] + dvel*m2/m
+			lvel[lind[i]] += - dvel*m1/m
+			lv[i] = v
 	#print(lpos)
 	#print(UV)
 	#print(la)
@@ -599,7 +538,8 @@ def plotdisk(d, fn, rep='./', fac=1.5, norm=1314, smin=2, mode=1, log=1, alpha=0
 	lind = d['bp'][0]
 	
 	print(d['m'])
-	print(lind)
+	#print(lind)
+	print('N_star = {}'.format(len(lind)))
 	if log>0:
 		cs = np.log10(d['m'])
 	else:
@@ -615,10 +555,10 @@ def plotdisk(d, fn, rep='./', fac=1.5, norm=1314, smin=2, mode=1, log=1, alpha=0
 	cb = plt.colorbar()
 	if log>0:
 		plt.clim(0, np.log10(5e2))
-		cb.set_label(r'$\log(M_{\star}\ [\rm M_{\odot}])$')
+		cb.set_label(r'$\log(m_{\star}\ [\rm M_{\odot}])$')
 	else:
 		plt.clim(1, 5e2)
-		cb.set_label(r'$M_{\star}\ [\rm M_{\odot}]$')
+		cb.set_label(r'$m_{\star}\ [\rm M_{\odot}]$')
 	if vec>0:
 		start = d['pos'][1:].T[:2]
 		print(d['v'])
@@ -635,19 +575,18 @@ def plotdisk(d, fn, rep='./', fac=1.5, norm=1314, smin=2, mode=1, log=1, alpha=0
 	plt.savefig(rep+fn)
 	plt.close()
 
-def genic(rep, n=10, tf=1e2, ta=1e5, alp=-1.0, mmax=5e2, seed=2333, norm=1e8, mode=1, fang=0.5, Q=1, rN=0, dfa=1e-1, fecc=0, rfac=1, mm=1):
+def genic(rep, st=0, n=10, tf=1e2, ta=1e5, alp=-1.0, mmax=5e2, seed=2333, norm=1e8, mode=1, fang=0.5, Q=1, rN=0, dfa=1e-1, fecc=0, rfac=1, mm=1, m10=1, fa2=0, fa1=0, gena=gena0):
 	if not os.path.exists(rep):
 		os.makedirs(rep)
 	N0 = int(N_t(tf)+0.5)
 	Mc = M_t(ta)
 	Rc = R_t(ta)*rfac
 	imf0 = pwimf(alp)
-	m10 = 1
 	m20, A = Mmax(tf, ta, alp, m10)
 	#m20 = min(m20, mmax)
 	nrdm.seed(seed)
 	ntot = 0
-	for i in range(n):
+	for i in range(st, n):
 		#print(i)
 		if rN>0:
 			N = 2 + int((N0-2)*2 * nrdm.uniform()+0.5)
@@ -660,35 +599,42 @@ def genic(rep, n=10, tf=1e2, ta=1e5, alp=-1.0, mmax=5e2, seed=2333, norm=1e8, mo
 			gene = popIed
 		else:
 			gene = circe
-		d = binaryhierarchy(lm0, Rc, seed=seed2, mode=mode, fang=fang, Q=Q, dfa=dfa, gene=gene)
+		d = binaryhierarchy(lm0, Rc, gena=gena, seed=seed2, mode=mode, fang=fang, Q=Q, dfa=dfa, gene=gene, fa2=fa2, fa1=fa1)
 		writeinit(d, rep, sn=i)
 		ntot += d['N']
 	return ntot
 
 if __name__=='__main__':
-	exit()
 	rN = 0
 	#tf, ta = 1e8, 3e5
 	#tf, ta = 4e1, 5e3
 	tf, ta = 1e2, 1e5
+	#tf, ta = 1e3, 1e6
 	#rep = 'tf1e3ta1e6alp1/'
 	#rep = 'tf1e8ta3e5alp235/'
-	#rep = 'tf4e1ta5e3alp157_test/'
-	rep = 'tf1e2ta1e5alp1_vir/'
+	#rep = 'tf4e1ta5e3alp1_close/'
+	#rep = 'tf1e2ta1e5alp1_tight_log/'
+	rep = 'tf1e2ta1e5alp1_test/'
+	#rep = 'tf1e3ta1e6alp1/'
 	#alp = -2.35
 	#alp = -1.57
-	alp = -1
+	alp, m10 = -1, 1
 	#dfa = 2.
 	dfa = 1e-1
 	fecc = 1
+	rfac = 1
 	#rfac = R_t(1e1)/R_t(ta) 
-	rfac = 1 #R_t(5e3)/R_t(ta)
+	#rfac = R_t(5e3)/R_t(ta)
+	#rfac = 1./3.
+	fa2 = 0 #1
+	fa1 = 1 #0
+	gena = gena0 # 1
 	imf0 = pwimf(alp)
 	N0 = int(N_t(tf)+0.5)
-	m10 = 1
+	#m10 = 1
 	m20, A = Mmax(tf, ta, alp, m10)
 	mmax = 5e2
-	Q = 1
+	Q = 0
 	Mc = M_t(ta)
 	Rc = R_t(ta)*rfac # AU
 	rho = Mc*Msun/(4*np.pi*(Rc*AU)**3/3)
@@ -710,16 +656,18 @@ if __name__=='__main__':
 	print('Free-fall, dynamical, relaxation, decay timescales: {:.2e}, {:.2e}, {:.2e}, {:.2e} yr'.format(t0, t1, t2, t3))
 	
 	fac = 1
-	mode=1
+	mode=0
 	fang = 0.5
-	d = binaryhierarchy(lm0, Rc, seed=seed2, mode=mode, fang=fang, Q=1)
+	d = binaryhierarchy(lm0, Rc, gena=gena, seed=seed2, mode=mode, fang=fang, Q=1, fa2=fa2, fa1=fa1)
 	#writeinit(d, sn=1024)
 	#Q = virialparam(d)
 	#print('Virial parameter Q = {:.3f}'.format(Q))
 	fn = 'popIIIdisk_tf{:.0e}_ta{:.0e}.pdf'.format(tf, ta)
 	plotdisk(d, fn, fac=fac, vec=0, fcn=1)
+	st = 0 #1000
 	ns = 1000
-	ntot = genic(rep, ns, tf, ta, alp, rN=rN, dfa=dfa, mmax=mmax, Q=Q, fecc=fecc, rfac=rfac)
+	seed = 2333
+	ntot = genic(rep, st, ns, tf, ta, alp, rN=rN, dfa=dfa, mmax=mmax, Q=Q, fecc=fecc, rfac=rfac, mm=mm, m10=m10, seed=seed, fa2=fa2, fa1=fa1, gena=gena)
 	print(ntot)
 	
 	test = 0
@@ -732,7 +680,7 @@ if __name__=='__main__':
 	ed = np.geomspace(m10, m20, nb)
 	plt.figure()
 	his, ed, pat = plt.hist(lmt, ed, label=r'$\alpha={:.2f}$, '.format(-alp)+r'$N_{\rm sample}='+'{:d}'.format(Ns)+'$', alpha=0.5)
-	plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+	plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 	plt.ylabel(r'Counts')
 	plt.xscale('log')
 	plt.ylim(0, np.max(his)*1.2)
