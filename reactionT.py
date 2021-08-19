@@ -32,6 +32,41 @@ def initial(Tini = 2.0e5, nini = 1.0e2, Xh2=1e-16, Ion=1.0, X = 0.76, D = [1.0, 
 		y[i] = max(y[i], 0.0)
 	return y
 
+def get_shield(NH2, T):
+	b5 = 9.12*(T/1e4)**0.5
+	a = 1.1
+	x = NH2/5e14
+	f = 0.965/(1+x/b5)**a + 0.035/(1+x)**0.5 * np.exp(-8.5e-4*(1+x)**0.5)
+	return f
+
+def HDshield(NH2):
+	x = NH2/2.34e19
+	return 1./(1+x)**0.238 * np.exp(-5.2e-3*x)
+
+def fshield(T, nh, xh2):
+	LJ = 4.8e19*(T/nh)**0.5
+	NH2 = nh*xh2*LJ
+	return get_shield(NH2, T)
+
+def J21_bal(T, nh, xh2, xe, J21, Ns = 17, D = 4e-5):
+	#xs = fshield(T, nh, xh2)
+	n = np.zeros(Ns)
+	n[0] = nh
+	n[3] = nh*xh2
+	n[5] = nh*xe
+	xnd = D*nh
+	n[9] = xnd
+	n[10] = xnd*xe
+	n[11] = xnd*xh2
+	#k = rates(1, T, n)
+	d = chemistry1(T, n, 1.0, 1e-4, J21, Ns, nh, 0, xnd, 0, [], [], 0, trace=1e-6)
+	ny, dt_cum, tform, tdest, total, Cr, Ds = d
+	rath = Ds[3]*nh*xh2/Cr[3]
+	ratd = Ds[11]*xnd*xh2/Cr[11]
+	#print(ny/nh)
+	#print(tform, tform*1.2e-11*J21*fshield(T, nh, xh2))
+	return rath, ratd
+
 def rates(J_21, T, n):
 	k = np.zeros(34+10+2+1,dtype='float')
 	tt = T**0.5
@@ -138,18 +173,19 @@ def rates(J_21, T, n):
 		else:
 			k[20] = 0.0
 	# Radiative processes
-	k[21] = 5.16e-12*J_21 # H + hnu = H+ + e-
-	k[22] = 7.9e-12*J_21
-	k[23] = 1.9e-13*J_21
-	k[24] = 2.0e-11*J_21
-	k[25] = 4.8e-12*J_21
-	k[26] = 1.2e-11*J_21
-	#J_LW = 1e4
-	if NH2<=1:
-		xshield = 1.0
-	else:
-		xshield = NH2**-0.75
-	k[27] = 1.2e-12*J_21*xshield
+	#if NH2<=1:
+	#	xshield = 1.0
+	#else:
+	#	xshield = NH2**-0.75
+	xshield = get_shield(NH2, T)
+	k[21] = 0#5.16e-12*J_21 # H + hnu = H+ + e-
+	k[22] = 0#7.9e-12*J_21  # He -> He+
+	k[23] = 0#1.9e-13*J_21	# He+ -> He++
+	k[24] = 1.1e-10*J_21 * 1.71 # H- +hnu = H + e- ?
+	k[25] = 4.8e-12*J_21 # H2+ + hnu = H + H+
+	k[26] = 1.2e-11*J_21*xshield # H2 + hnu = H2+ + e-
+	k[27] = 1.38e-12 * 0.97 * J_21 * xshield
+	
 	# Three-body reations from Palla et al.,1983,ApJ 271,632
 	k[28] = 5.5e-29/T # H + H + H = H2 + H
 	k[29] = 0.125*k[28] # H + H + H2 = H2 + H2
@@ -202,7 +238,7 @@ def equilibrium2(lT, nb = 1e2, X = 0.76, D = 4e-5, Li = 4.6e-10, J_21 = 0.0, Ns 
 			ny[7] = xnhe - ny[8]-ny[6]
 		ny[5] = ny[1]+ny[7]+2.0*ny[8]
 		#XNUM1=(k[8]*ny[0] + k[13]*ny[3])*ny[5];
-		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]#+ k[24] +k[11]*ny[4];
+		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24] +k[11]*ny[4];
 		if XDENOM1>1e-52:
 			a = k[8]*ny[0]*ny[5]/XDENOM1
 			b = k[13]*ny[5]/XDENOM1 
@@ -210,7 +246,7 @@ def equilibrium2(lT, nb = 1e2, X = 0.76, D = 4e-5, Li = 4.6e-10, J_21 = 0.0, Ns 
 		else:
 			print('Weird production of H-.')
 		#XNUM2=(k[6]*ny[0] + k[16]*ny[3]+k[20]*ny[2])*ny[1]#+ k[26]*ny[3];
-		XDENOM2=k[7]*ny[0]+k[10]*ny[5]+k[11]*ny[2]#+k[25];
+		XDENOM2=k[7]*ny[0]+k[10]*ny[5]+k[11]*ny[2]+k[25];
 		if XDENOM2>1e-52:
 			c = k[6]*ny[0]*ny[1]/XDENOM2
 			d = k[16]*ny[1]/XDENOM2
@@ -239,7 +275,7 @@ def equilibrium2(lT, nb = 1e2, X = 0.76, D = 4e-5, Li = 4.6e-10, J_21 = 0.0, Ns 
 			else:
 				print('Weird production of H-.')
 			XNUM2=(k[6]*ny[0] + k[16]*ny[3]+k[20]*ny[2])*ny[1]+ k[26]*ny[3];
-			XDENOM2=k[7]*ny[0]+k[10]*ny[5]+k[11]*ny[2]#+k[25];
+			XDENOM2=k[7]*ny[0]+k[10]*ny[5]+k[11]*ny[2]+k[25];
 			if XDENOM2>1e-52:
 				ny[4]=XNUM2/XDENOM2;
 			else:
@@ -313,13 +349,16 @@ def equilibrium2(lT, nb = 1e2, X = 0.76, D = 4e-5, Li = 4.6e-10, J_21 = 0.0, Ns 
 				out[j].append(0.0)
 	return  {'T':np.array(lT), 'X':np.array(out), 'n':nb}
 	
-def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0):
+def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, H2_flag, trace=1e-6):
 	total = 0
 	out = np.zeros(Ns,dtype='float')
 	dt_cum = 0.0
 	dt = dt0
 	Cr, Ds = np.zeros(Ns,dtype='float'), np.zeros(Ns,dtype='float')
 	ny = nin
+	nh = ny[0]+ny[1]+ny[2]+2.0*(ny[3]+ny[4])
+	LJ = 4.8e19*(T/nh)**0.5
+	NH2 = ny[3]*LJ
 	while dt_cum<dt0:
 		k = rates(J_21, T, ny)
 		Cr[5]=k[21]*ny[0]+k[22]*ny[6]+k[23]*ny[7]+(k[0]*ny[0]+k[1]*ny[6]+k[2]*ny[7])*ny[5]
@@ -327,23 +366,25 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0):
 		if (dt*abs(Cr[5]-Ds[5]*ny[5])>epsH*abs(ny[5])) and (ny[5]>0):
 			dt = dt/2.0 #epsH*ny[5]/abs(Cr[5]-Ds[5]*ny[5])#
 			continue
-		if ny[5]<=1e-4*xnh and T<2e4:
+		if (ny[5]<=1e-4*xnh and T<2e4 and H2_flag>=1):
 			for i in [3,11,16]:
-				if (dt*abs(Cr0[i]-Ds0[i]*ny[i])>epsH*abs(ny[i])) and (ny[i]/xnh>1e-10):
+				if (dt*abs(Cr0[i]-Ds0[i]*ny[i])>epsH*abs(ny[i])) and (ny[i]/xnh>trace):
 					dt = epsH*abs(ny[i]/(Cr0[i]-Ds0[i]*ny[i])) #dt/2.0
-		if dt>1.e5*3.14e7:
-			dt = 1.e5*3.14e7
+		
+		#if dt>1.e5*3.14e7:
+		#	dt = 1.e5*3.14e7
+		
 		if dt + dt_cum>dt0:
 			dt = dt0 - dt_cum
 			dt_cum = dt0
 		else:
 			dt_cum += dt
-		Cr[5]=k[21]*ny[0]+k[22]*ny[6]+k[23]*ny[7]+(k[0]*ny[0]+k[1]*ny[6]+k[2]*ny[7])*ny[5]# +k[24]*ny[2]+k[26]*ny[3]
+		Cr[5]=k[21]*ny[0]+k[22]*ny[6]+k[23]*ny[7]+(k[0]*ny[0]+k[1]*ny[6]+k[2]*ny[7])*ny[5] #+k[24]*ny[2]+k[26]*ny[3]
 		Ds[5]=k[3]*ny[1]+k[4]*ny[7]+k[5]*ny[8]
 		ny[5]=(ny[5]+Cr[5]*dt)/(1.e0+Ds[5]*dt)
 
 		Cr[0]=k[3]*ny[1]*ny[5];
-		Ds[0]=k[0]*ny[5]+k[21];
+		Ds[0]=k[0]*ny[5]+k[21]+2*k[28]*ny[0]**2+2*k[29]*ny[0]*ny[3];
 		ny[0]=(ny[0]+Cr[0]*dt)/(1.e0+Ds[0]*dt);
 
 		Cr[1]=k[0]*ny[5]*ny[0] +k[21]*ny[0]
@@ -363,7 +404,7 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0):
 		ny[8]=(ny[8]+Cr[8]*dt)/(1.e0+Ds[8]*dt);
 #/**** calculate equilibrium abundance for H- *********************/
 		XNUM1=(k[8]*ny[0] + k[13]*ny[3])*ny[5];
-		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24]# +k[11]*ny[4];
+		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24] +k[11]*ny[4];
 		#print(XNUM1, XDENOM1)
 		if XDENOM1>1e-52:
 			ny[2]=XNUM1/XDENOM1;
@@ -378,7 +419,7 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0):
 			print('Weird production of H2+.')
 
 		Ds[3]=k[13]*ny[5]+k[14]*ny[0]+k[15]*ny[3]+k[16]*ny[1]+k[17]*ny[5]+k[26]+k[27];
-		Cr[3]=k[7]*ny[4]*ny[0]+k[9]*ny[2]*ny[0]+k[11]*ny[4]*ny[2];
+		Cr[3]=k[7]*ny[4]*ny[0]+k[9]*ny[2]*ny[0]+k[11]*ny[4]*ny[2]+k[28]*ny[0]**3+k[29]*ny[0]**2*ny[3];
 		ny[3]=(ny[3]+Cr[3]*dt)/(1.e0+Ds[3]*dt);
 		tform, tdest = 0.0, 0.0
 		if Cr[3]>1e-52:
@@ -406,18 +447,20 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0):
 			ny[0]=0.e0;
 
 		XNUM1=(k[8]*ny[0] + k[13]*ny[3])*ny[5];
-		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24]# +k[11]*ny[4];
+		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24] +k[11]*ny[4];
 		ny[2]=XNUM1/XDENOM1;
 
 		for i in range(9):
 			if ny[i]<1e-30:
 				ny[i] = 0.0
 
+		kdeHD = k[27]*HDshield(NH2)
+
 		Cr[10]=k[30]*ny[9]*ny[1]+k[33]*ny[11]*ny[1]
 		Ds[10]=k[3]*ny[5]+k[31]*ny[0]+k[32]*ny[3]
 		ny[10]=min((ny[10]+Cr[10]*dt)/(1.0+Ds[10]*dt),xnd)
 		Cr[11]=k[32]*ny[10]*ny[3]
-		Ds[11]=k[33]*ny[1]
+		Ds[11]=k[33]*ny[1] + kdeHD
 		ny[11]=min((ny[11]+Cr[11]*dt)/(1.0+Ds[11]*dt),xnd)
 		ny[9]=xnd-ny[11]-ny[10]
 
@@ -695,6 +738,26 @@ def chemistry2(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, Cr0, Ds0):
 		total += 1
 	#tform, tdest = 0.0, 0.0
 	return [ny, dt_cum, tform, tdest, total, Cr, Ds]
+
+#def J21_bal(T, nh, xh2, xe, J21, Ns = 17, D = 4e-5):
+if __name__=='__main__':
+	x1, x2 = 1e-2, 1e2
+	lJ = np.geomspace(x1, x2, 1000)
+	lparam = [[2.5e2, 1e2, 5e-4, 1e-5]]#, [1e3, 1e1, 1e-8, 6e-5]]#, [1e3, 1e2, 1e-8, 6e-6]]
+	drate = [[J21_bal(*param, j) for j in lJ] for param in lparam]
+	plt.figure()
+	for lrate in drate:
+		lrate = np.array(lrate).T
+		plt.loglog(lJ, lrate[0])
+		plt.loglog(lJ, lrate[1], '--')
+	plt.plot([x1, x2], [1]*2, 'k-', lw=0.5)
+	plt.xlim(x1, x2)
+	plt.xlabel(r'$J_{\rm LW,21}$')
+	plt.ylabel(r'$k_{\rm des}/k_{\rm form}$')
+	plt.tight_layout()
+	plt.savefig('rate_ratio_J21.pdf')
+	plt.close()
+	#plt.show()
 
 
 

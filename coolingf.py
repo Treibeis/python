@@ -163,19 +163,19 @@ def JJ_metal_cooling(temp, xn, xe, Z):
 	"""
 	nh = xn * 0.93;
 	#Asplund:09 solar abundances
-	x_CII = 3.26e-3 Z;    
+	x_CII = 3.26e-3 * Z;    
 	x_OI = 8.65e-3 * Z;    
 	x_SiII = 1.08e-3 * Z;    
 	x_FeII = 1.73e-3 * Z;   
   
 	#total number density for each species
-	n_CII = x_CII * nh;
-	n_OI = x_OI * nh;
-	n_SiII = x_SiII * nh;
-	n_FeII = x_FeII * nh;
+	n_CII = x_CII * nh/12;
+	n_OI = x_OI * nh/16;
+	n_SiII = x_SiII * nh/28;
+	n_FeII = x_FeII * nh/56;
 
 	#if Z=0 or T>20000 K no need to calculate lambda metals
-	if (P[i].Metallicity[0]==0.0 || temp>20000.0):
+	if (Z==0.0 and temp>20000.0):
 		return 0.0;
 
 	#CII
@@ -186,9 +186,9 @@ def JJ_metal_cooling(temp, xn, xe, Z):
 	CII_g2=4.;
 	CII_g1=2.;
 
-	beta = pow((BOLTZMANN*temp),-1.0);
-	CII_gamma_e_12 = CII_g2/CII_g1 * CII_gamma_e_21 * exp(-1*beta*CII_delta_E21);
-	CII_gamma_H_12 = CII_g2/CII_g1 * CII_gamma_H_21 * exp(-1*beta*CII_delta_E21);
+	beta = pow((kB*temp),-1.0);
+	CII_gamma_e_12 = CII_g2/CII_g1 * CII_gamma_e_21 * np.exp(-1*beta*CII_delta_E21);
+	CII_gamma_H_12 = CII_g2/CII_g1 * CII_gamma_H_21 * np.exp(-1*beta*CII_delta_E21);
 
 	lambda_CII = lam_2level(CII_gamma_H_21,CII_gamma_H_12,CII_gamma_e_21,CII_gamma_e_12,CII_A21,CII_delta_E21,xe,nh,n_CII);
 
@@ -200,8 +200,8 @@ def JJ_metal_cooling(temp, xn, xe, Z):
 	SiII_g2=4.;
 	SiII_g1=2.;
   
-	SiII_gamma_e_12 = SiII_g2/SiII_g1 * SiII_gamma_e_21 * exp(-1*beta*SiII_delta_E21);
-	SiII_gamma_H_12 = SiII_g2/SiII_g1 * SiII_gamma_H_21 * exp(-1*beta*SiII_delta_E21);
+	SiII_gamma_e_12 = SiII_g2/SiII_g1 * SiII_gamma_e_21 * np.exp(-1*beta*SiII_delta_E21);
+	SiII_gamma_H_12 = SiII_g2/SiII_g1 * SiII_gamma_H_21 * np.exp(-1*beta*SiII_delta_E21);
 
 	lambda_SiII = lam_2level(SiII_gamma_H_21,SiII_gamma_H_12,SiII_gamma_e_21,SiII_gamma_e_12,SiII_A21,SiII_delta_E21,xe,nh,n_SiII);
 
@@ -213,8 +213,8 @@ def JJ_metal_cooling(temp, xn, xe, Z):
 	OI_g2=5.;
 	OI_g1=3.;
 
-	OI_gamma_e_12 = OI_g2/OI_g1 * OI_gamma_e_21 * exp(-1*beta*OI_delta_E21);
-	OI_gamma_H_12 = OI_g2/OI_g1 * OI_gamma_H_21 * exp(-1*beta*OI_delta_E21);
+	OI_gamma_e_12 = OI_g2/OI_g1 * OI_gamma_e_21 * np.exp(-1*beta*OI_delta_E21);
+	OI_gamma_H_12 = OI_g2/OI_g1 * OI_gamma_H_21 * np.exp(-1*beta*OI_delta_E21);
 
 	lambda_OI = lam_2level(OI_gamma_H_21,OI_gamma_H_12,OI_gamma_e_21,OI_gamma_e_12,OI_A21,OI_delta_E21,xe,nh,n_OI);
 
@@ -226,8 +226,8 @@ def JJ_metal_cooling(temp, xn, xe, Z):
 	FeII_g2=8.;
 	FeII_g1=10.;
 
-	FeII_gamma_e_12 = FeII_g2/FeII_g1 * FeII_gamma_e_21 * exp(-1*beta*FeII_delta_E21);
-	FeII_gamma_H_12 = FeII_g2/FeII_g1 * FeII_gamma_H_21 * exp(-1*beta*FeII_delta_E21);
+	FeII_gamma_e_12 = FeII_g2/FeII_g1 * FeII_gamma_e_21 * np.exp(-1*beta*FeII_delta_E21);
+	FeII_gamma_H_12 = FeII_g2/FeII_g1 * FeII_gamma_H_21 * np.exp(-1*beta*FeII_delta_E21);
 
 	lambda_FeII = lam_2level(FeII_gamma_H_21,FeII_gamma_H_12,FeII_gamma_e_21,FeII_gamma_e_12,FeII_A21,FeII_delta_E21,xe,nh,n_FeII);
   

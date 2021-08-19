@@ -15,9 +15,12 @@ G = 6.674e-8
 kB = 1.3806e-16
 H00 = 100*10**5/pc/10**6
 H0 = H00*hubble 
+Zsun = 0.02
 
-REDSHIFT = 5.0
-NMAX = 1e12
+REDSHIFT = 0.0
+NMAX = 1e15
+TMIN = -1#1e3
+SPACE = 10
 
 lT00 = np.hstack([10**np.linspace(1,3.5,5), 10**np.linspace(3.55,3.75,5), 10**np.linspace(3.8,4.2,20), 10**np.linspace(4.25,4.95,5), 10**np.linspace(5,6,5)])
 
@@ -40,7 +43,7 @@ def Hubble(z):
 def tff(rho):
 	return (3.0*np.pi/32.0/G/rho)**0.5
 
-def main1(Tini = 2.0e2, nini = n0(), Xh2=0.0, Ion=1.0e-4, Li = 4.6e-10, D = 4e-5, z = REDSHIFT, mode = 1, J_21 = 0.0, num = 1e4, dtini =1.e-4, epsT = 1.e-4, epsH = 1.e-3, fac1 = 10.0, fac2 = 10.0, gamma = 5.0/3.0, X = 0.76):
+def main1(Tini = 2.0e2, nini = n0(), Xh2=0.0, Ion=1.0e-4, Li = 4.6e-10, D = 4e-5, z = REDSHIFT, mode = 1, J_21 = 0.0, num = 1e4, dtini =1.e-4, epsT = 1.e-4, epsH = 1.e-2, fac1 = 10.0, fac2 = 10.0, gamma = 5.0/3.0, X = 0.76, Z = 3e-4, boost=1.0, H2_flag = 1):
 	start = time.time()
 	mH = PROTON*4.0/(1.0+3.0*X)
 	num = int(num)
@@ -52,7 +55,7 @@ def main1(Tini = 2.0e2, nini = n0(), Xh2=0.0, Ion=1.0e-4, Li = 4.6e-10, D = 4e-5
 	else:
 		tmax = fac1/Hubble(z)
 	dt0 = tmax/num
-	out = evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X)
+	out = evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X, Z, boost, H2_flag)
 	end = time.time()
 	print(end-start)
 	return out
@@ -108,7 +111,7 @@ def equilibrium1(lT, num = 1e4, frac = 0.1, lim = 1e-3, maxtime = 500.0, dtini =
 			else:
 				dt = dt0
 				Cr0, Ds0 = abund[5], abund[6]
-			abund = chemistry1(lT[i], nold, dt, eps, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0)
+			abund = chemistry1(lT[i], nold, dt, eps, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, H2_flag)
 			t_cum += abund[1]
 			nold = abund[0]
 			#newX = nold/nb
@@ -159,7 +162,7 @@ def equilibrium1(lT, num = 1e4, frac = 0.1, lim = 1e-3, maxtime = 500.0, dtini =
 	return {'T':np.array(lT), 'X':np.array(out), 'n':nb, 'std': np.array(std)}#, 'd':data}
 					
 
-def evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X):
+def evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X, Z, boost, H2_flag):
 	total = 0
 	tmax = dt0*num
 	print('tmax, dt_ref = '+str(tmax)+', '+str(dt0))
@@ -191,7 +194,7 @@ def evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X):
 					lX[x][0], yy[x] = 0.0, 0.0
 			nold = np.array([lX[x][count]*refa[x] for x in range(Ns)])
 			Told = lT[count]
-			dT_dt_old_ = cool(Told, nb, 0.0, nold, J_21, z, mode, gamma, X)
+			dT_dt_old_ = cool(Told, nb, 0.0, nold, J_21, z, mode, gamma, X, Z, boost, H2_flag)
 			dT_dt_old = dT_dt_old_[0]
 			dnb_dt = dT_dt_old_[1]
 		#if abs(dT_dt_old*dt_T)>epsT*Told:
@@ -200,7 +203,7 @@ def evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X):
 		#	if Told>1e5:
 		#		dt_T = dtmin
 		#	else:
-			dt_T = min(dt0,1.e5*3.14e7)#dt0
+			dt_T = dt0 #min(dt0,1.e5*3.14e7)#dt0
 			if abs(dT_dt_old*dt_T)>epsT*Told:
 				dt_T = epsT*Told/abs(dT_dt_old)
 		if dt_T + t_cum>tmax:
@@ -208,19 +211,22 @@ def evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X):
 			t_cum = tmax
 		if count==0:
 			Cr0, Ds0 = np.zeros(Ns,dtype='float'), np.zeros(Ns,dtype='float')
-			abund0 = chemistry1(Told, nold, dt_T, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0)
+			abund0 = chemistry1(Told, nold, dt_T, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, H2_flag)
 			Cr0, Ds0 = abund0[5], abund0[6]
 		else:
 			Cr0, Ds0 = abund[5], abund[6]
-		abund = chemistry1(Told, nold, dt_T, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0)
+		abund = chemistry1(Told, nold, dt_T, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, H2_flag)
 		nold = abund[0]
 		for x in range(Ns):
 			if refa[x]!=0:
 				yy[x] = nold[x]/refa[x]
 			else:
 				yy[x] = 0.0
+		if H2_flag<1:
+			yy[3] = H2_flag
+			nold[3] = yy[3]*refa[3]
 		t_cum += abund[1]
-		dT_dt = cool(Told, nb, dnb_dt, nold, J_21, z, mode, gamma, X)
+		dT_dt = cool(Told, nb, dnb_dt, nold, J_21, z, mode, gamma, X, Z, boost, H2_flag)
 		Told = Told + (dT_dt[0] + dT_dt_old)*abund[1]/2.0
 		dT_dt_old = dT_dt[0]
 		if Told<=Tcmb:
@@ -235,7 +241,7 @@ def evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X):
 		#dt_T = min(dt_T*2.0, dt0 - t_cumT)
 		total += abund[4]
 		count += 1
-		if (count%100==0)or(t_cum>=tmax):
+		if (count%SPACE==0)or(t_cum>=tmax):
 			lt.append(t_cum)#[count] = t_cum
 			lT.append(Told)#[count] = Told
 			ln.append(nb)#[count] = nb
@@ -250,7 +256,7 @@ def evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X):
 		#	break
 		#print(t_cum)
 		if mode==1:
-			if nb>=NMAX:
+			if nb>=NMAX or Told<=TMIN:
 				lt.append(t_cum)#[count] = t_cum
 				lT.append(Told)#[count] = Told
 				ln.append(nb)#[count] = nb
@@ -264,13 +270,13 @@ def evolve(D, Li, y0, dt0, dtmin, num, J_21, z, mode, epsT, epsH, gamma, X):
 				break
 	return {'t':np.array(lt)*Hubble(z), 'T': np.array(lT), 'n': np.array(ln), 'X': np.array(lX), 'tform': np.array(ltform), 'tdest': np.array(ltdest), 'num': total}
 
-def cool(T, ntot, ndot, n, J_21, z, mode, gamma, X):
+def cool(T, ntot, ndot, n, J_21, z, mode, gamma, X, Z, boost, H2_flag):
 	Tcmb = 2.73*(1+z)
 	mH = PROTON*4.0/(1.0+3.0*X)
 	out = np.zeros(2,dtype='float')
 	nh = n[0]+n[1]+n[2]+2.0*(n[3]+n[4])
 	ny = n
-	Gam = 0.0 #J_21*(5.1e-23*n[0] + 1.2e-22*n[6] + 2.5e-24*n[7])
+	Gam = 0#J_21*(5.1e-23*n[0] + 1.2e-22*n[6] + 2.5e-24*n[7])
 	L = np.zeros(11,dtype='float')
 	if T>5e3:
 		gff=1.1+0.34*np.exp(-(5.5-np.log10(T))**2/3.0)
@@ -327,12 +333,13 @@ def cool(T, ntot, ndot, n, J_21, z, mode, gamma, X):
 	#L[2] = LambdaHI(T, n[0], n[5]) + LambdaHII(T, n[1], n[5]) 
 	#L[3] = LambdaHeI(T, n[6], n[5]) + LambdaHeII(T, n[7], n[5]) + LambdaHeIII(T, n[8], n[5]) 
 	LH2, LHD, LLiH = 0.0, 0.0, 0.0
-	if T<=2e4:
+	if (T<=2e4):
 		nhd = n[11]# 0.01*xnd 
 		LH2 = LambdaH2(T, n[3], n[0]) - LambdaH2(Tcmb, n[3], n[0]) 
 		LHD = LambdaHD(T, nhd, n[0], nh) - LambdaHD(Tcmb, nhd, n[0], nh) 
 		LLiH = LambdaLiH(T, n[16], n[0]) - LambdaLiH(Tcmb, n[16], n[0])
-	Lam = sum(L)+LH2+LHD+LLiH-Gam
+	Lmetal = JJ_metal_cooling(T, ntot, n[5]/nh, Z)
+	Lam = sum(L)+LH2+LHD+LLiH-Gam + Lmetal
 	expansion = 0.0#- 3*kB*T*Hubble(z)
 	if mode==0:
 		out[0] = (-Lam/ntot +expansion)*(gamma-1.0)/kB/gamma
@@ -343,7 +350,7 @@ def cool(T, ntot, ndot, n, J_21, z, mode, gamma, X):
 		out[0] = dT_c + dT_ad
 		out[1] = -out[0]*ntot/T
 	else:
-		out[1] = ntot/tff(ntot*mH)
+		out[1] = ntot/tff(ntot*mH) * boost
 		out[0] = (-Lam/ntot + expansion + kB*T*out[1]/ntot)*(gamma-1.0)/kB
 	return out
 
