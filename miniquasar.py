@@ -264,6 +264,13 @@ def time_isobhb(a0, M1, M2, e0 = 0):
 		t *= integrate.quad(eint, 0, e0)[0]
 		return t / YR
 
+def time_isobhb_fit(a0, M1, M2, e0=0):
+	T0 = time_isobhb_circ(a0, M1, M2, 0)
+	if 1-e0>1e-5:
+		return T0*(1+0.27*e0**10+0.33*e0**20+0.2*e0**1000)*(1-e0**2)**3.5
+	else:
+		return T0*768./425*(1-e0**2)**3.5
+
 def astar_GW(M1, M2, sig, rho, e, H  =17.5, a0 = 0.04*KPC):
 	m = (M1 + M2)*Msun
 	m1m2 = M1 * M2 * Msun**2
@@ -607,15 +614,31 @@ if __name__ == "__main__":
 	plt.close()
 	#"""
 	
-	le = np.linspace(0, 1-1e-3, 1000) #np.geomspace(1e-3, 1-1e-3, 1000)
+	x1, x2 = 1e-5, 1
+	le = 1-np.geomspace(x1, x2, 1000) #np.geomspace(1e-3, 1-1e-3, 1000)
 	lt0 = time_isobhb_circ(1, 1, 1, le)
 	lt1 = np.array([time_isobhb(1, 1, 1, e) for e in le])
+	lt2 = np.array([time_isobhb_fit(1, 1, 1, e) for e in le])
+	rat3 = (1-0.8*le)
+	xf = 0
+	if xf>0:
+		lx = 1-le
+	else:
+		lx = le
 	plt.figure()
-	plt.plot(le, lt0/lt1)
+	plt.plot(lx, lt0/lt1, label='Integration')
+	plt.plot(lx, lt0/lt2, '--', label='Fit')
+	plt.plot(lx, rat3, '-.', label='Approximation')
+	if xf>0:
+		plt.xlabel(r'$1-e_{0}$')
+		plt.xlim(x1, x2)
+		plt.xscale('log')
+	else:
+		plt.xlabel(r'$e_{0}$')
+		plt.xlim(0, 1)
+	plt.ylim(0, 1)
 	plt.ylabel(r'$t_{\mathrm{col}}(e=e_{0})/t_{\mathrm{col}}$')
-	plt.xlabel(r'$e_{0}$')
-	plt.xlim(0, 1)
-	#plt.xscale('log')
+	plt.legend()
 	plt.tight_layout()
 	plt.savefig('rat_tcol_e0.pdf')
 	plt.close()

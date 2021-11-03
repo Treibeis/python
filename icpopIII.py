@@ -469,8 +469,8 @@ def binaryhierarchy(lm, Rc, gena=gena0, gene=circe, seed=666, dRc = 2./3., wf=wf
 			vp = (v**2-vz**2)**0.5
 			lpos[i] = lpos[lind[i]] + np.array([x*R/r, y*R/r, z])
 			dvel = np.array([vx*vp/v, vy*vp/v, vz])
-			lvel[i] = lvel[lind[i]] + dvel*m2/m
-			lvel[lind[i]] += - dvel*m1/m
+			lvel[i] = lvel[lind[i]] + dvel #*m2/m
+			lvel[lind[i]] += 0 #- dvel*m1/m
 			lv[i] = v
 		else:
 			if ncp[lind[i]]==0:

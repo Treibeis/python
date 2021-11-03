@@ -21,12 +21,12 @@ fnsc = fnsc0
 #fnsc = 0.111784279
 labe = 'eta1.0E-03'
 fs = '_IMFmin1.0E+00IMFmax1.7E+02'+labe+'slope0.0E+00.dat'
-ntree = 100
-drep = 'Merger_Tree/dummy50/' 
+ntree = 500
+drep = 'Merger_Tree/dummy500/' 
 #repref = 'bhb_stat/'
 repref = 'Merger_Tree/dummy51/'
-drepi = 'Merger_Tree/dummy50/'
-repo = 'bhb_stat/eif0/'
+drepi = 'Merger_Tree/dummy500/'
+repo = 'bhb_stat/eif0_0/'
 eif = 0
 Vcom = 30.3
 #mrem_file = 'mass_star_remnant.dat'
@@ -36,9 +36,13 @@ test = 0
 seed = 1314
 bhb_min, bhb_max = 3, 200
 nb = 8
+fgw0 = 1
+fub = 0
 
 op = 1
 mode = 1
+
+cr = 'comp/'
 
 drep1 = 'Merger_Tree/dummy51/'
 drep2 = 'Merger_Tree/dummy52/'
@@ -139,6 +143,9 @@ def sfrtf(z, a, b, c, d):
 	#return a*(t**b*np.exp(-t/c)+d*np.exp(d*(t-1)/c)) 
 	return a*(1+z)**b/(1+((1+z)/c)**d)
 	
+def sfrbf(z):
+	return 0.015*(1+z)**2.7/(1+((1+z)/2.9)**5.6)
+	
 m = 20
 g = 0
 e = 0
@@ -148,25 +155,30 @@ lR = Rg_Mg(lM, g)
 lr = [1, 3, 10, 30]#, 1e3]
 lc = ['r', 'g', 'b', 'k']
 y1, y2 = 1, 1e8
+#y1, y2 = 1, 1e6
 plt.figure()
 for i in range(len(lr)):
 	lt1 = tdf_old(lr[i], m, lM, lR)/1e6
 	lt2 = tdf_arca(lr[i], m, lM, lR, e, g)/1e6
 	if 1:
-		plt.loglog(lM, lt1, color=lc[i], label=r'$r={}\ \rm pc$ (BT08)'.format(lr[i]))
+		plt.loglog(lM, lt1, color=lc[i], label=r'$r={}\ \rm pc$ (BT11)'.format(lr[i]))
 		plt.loglog(lM, lt2, '--', color=lc[i], label=r'$r={}\ \rm pc$ (AS16)'.format(lr[i]))
+		#plt.loglog(lM, lt2, lls[i], color=lc[i], label=r'$r={}\ \rm pc$'.format(lr[i]))
 	else:
-		plt.loglog(lM, lt1, color=lc[i], label=r'$r={}\ \rm pc$ (BT08)'.format(lr[i]))
+		plt.loglog(lM, lt1, color=lc[i], label=r'$r={}\ \rm pc$ (BT11)'.format(lr[i]))
 		plt.loglog(lM, lt2, '--', color=lc[i], label='AS16')
 plt.legend(loc=2, ncol=2)
 plt.title(r'${}={}\ {}, \gamma_{}={}$, $e_{}={}$'.format(r'm_{\bullet}', m, r'\rm M_{\odot}', r'{\rm g}', g, r'{\rm if}', e))
 plt.xlim(M1, M2)
 plt.ylim(y1, y2)
 plt.xlabel(r'$M_{\star}\ \rm [M_{\odot}]$')
-plt.ylabel(r'$\tau_{\rm df}\ \rm [Myr]$')
+plt.ylabel(r'$\tau_{\rm DF}\ \rm [Myr]$')
 plt.tight_layout()
-plt.savefig('tdf_Mg.pdf')
+plt.savefig('tdf_Mg.png')
 plt.close()
+
+lx = np.linspace(0,2,100)
+print('Minimal tdf at 300 pc: {:.2f} Gyr'.format(np.min([tdf(300,20,1e5,Rg_Mg(1e5,x),0.9,x)/1e9 for x in lx])/1.67))
 
 """
 lmu = np.linspace(0, mu2, 1000)
@@ -232,15 +244,24 @@ if test>0:
 	drep = 'Merger_Tree/dummy/' 
 	repo = 'bhb_stat/dummy/'
 
+ref0 = np.array(retxt(cr+'SF16.txt', 3, 0, 0))
+datarep = '/home/friede/Documents/SimulationCodes/FDbox_Lseed/'
+repi = datarep
+sfr0III = np.array(retxt_nor(repi+'popIII_sfr.txt', 4, 0, 0))
+sfr0II = np.array(retxt_nor(repi+'popII_sfr.txt', 4, 0, 0))
+
 fsfr = drepi+'z_SFRII'+fs
 fsfr3 = drepi+'z_SFRIII'+fs
 fflw = drepi+'z_FLW'+fs
 sfr2 = np.array(retxt(fsfr, 4, 2))
 sfr3 = np.array(retxt(fsfr3, 7, 3))
-x1, x2 = 0, 25
-y1, y2 = 1e-6, 0.5
+x1, x2 = 0, 40
+y1, y2 = 1e-6, 10
 lz = np.linspace(x1, x2, 1000)
 para = [765.7, -5.92, 12.83, -8.55]
+madau17 = [0.01, 2.6, 3.2, 6.2]
+madau14 = [0.015, 2.7, 2.9, 5.6]
+lsfrd_ = sfrtf(lz, *madau14)
 lsfrd = sfrtf(lz, *para)
 sfrt = sfr2[1]+sfr3[5]
 sfrts = sfr2[2]+sfr3[6]
@@ -251,19 +272,29 @@ plt.plot(sfr2[0], sfrt, '-', label=r'Total ($\eta_{\star,0}=0.003$)')
 plt.fill_between(sfr2[0], sfrt+sfrts*3, low, fc='m', alpha=0.2)
 plt.plot(sfr3[0], sfr3[5], '--', label=r'Pop III ($\eta_{\star,\rm III}=0.001$)')
 plt.fill_between(sfr3[0], sfr3[5]+3*sfr3[6], sfr3[5]-3*sfr3[6], fc='b', alpha=0.2)
-plt.plot(sfr2[0], sfr2[3], 'k-.', label='Madau+2014; Campisi+2011')# (obs. & sim.)')
+plt.plot(1/sfr0II[0]-1, sfr0II[3]+sfr0III[3], ls=(0, (5,1)), label='Total (Liu+2020)')
 plt.plot(lz[lz>4], lsfrd[lz>4], 'g:', label='Pop III (Liu+2020)')
+plt.plot(sfr2[0], sfr2[3], 'k-.', label='Campisi+2011')# (obs. & sim.)')
+plt.plot(lz[lz<10], lsfrd_[lz<10], color='r', ls=(0,(10,5)), label='Madau+2014')
+plt.fill_between(lz[lz<10], lsfrd_[lz<10]*10**0.2, lsfrd_[lz<10]/10**0.2, facecolor='r', alpha=0.3)#, label='Madau+2014')
+#plt.plot(ref0[0], 10**ref0[1], 'o', label='Finkelstein+2016: observed', color='k')
+plt.plot(ref0[0], 10**ref0[2], '^', label='Finkelstein+2016', color='k')
 zcol = 4.6
-plt.fill_between([x1, zcol],[y1,y1],[y2,y2],fc='gray',alpha=0.3)
+#plt.fill_between([x1, zcol],[y1,y1],[y2,y2],fc='gray',alpha=0.3)
+plt.plot([zcol]*2,[y1,y2],'k-',lw=0.5)
 plt.yscale('log')
 plt.xlabel(r'$z$')
 plt.ylabel(r'$\rm SFRD\ [M_{\odot}\ yr^{-1}\ Mpc^{-3}]$')
-plt.legend()
+plt.legend(ncol=1)#,fontsize=14)
 plt.xlim(x1, x2)
 plt.ylim(y1, y2)
 plt.tight_layout()
 plt.savefig('sfrd_z.pdf')
 plt.close()
+
+lt = np.array([TZ(z) for z in lz])/YR
+lt_ = np.array([TZ(z) for z in sfr3[0]])/YR
+print('Overall Pop III fraction: {:.4e}-{:.4e}'.format(abs(np.trapz(lsfrd, lt))/abs(np.trapz(lsfrd_, lt)),abs(np.trapz(sfr3[5], lt_))/abs(np.trapz(lsfrd_, lt))))
 
 flwref = np.array(retxt('fdbk/FLW_z.txt',2))
 x1, x2 = 0, 25
@@ -288,7 +319,7 @@ plt.tight_layout()
 plt.savefig('FLW_z.pdf')
 plt.close()
 
-zreion = 6
+zreion = 5.5
 ffion1 = np.array(retxt(drepi+'z_QIII'+fs,3,2))
 ffion2 = np.array(retxt(drepi+'z_QII'+fs,3,2))
 x1, x2 = 2.5, 20
@@ -338,13 +369,14 @@ plt.tight_layout()
 plt.savefig('tau_z.pdf')
 plt.close()
 
-"""
+#"""
 eta0 = 0.003
 m1, m2 = 1e8, 1e15
 lmh = np.geomspace(m1, m2, 100)
 lz = [0, 2, 4, 6, 8, 10]
 lmm = [5e14, 1e14, 2e13, 5e12, 7e11, 2e11] #[m2]*6
-lmi = [1e10]+[1e8]*5 #[1e10, 1e11, 7e10, 4e10, 4e10, 1e8]
+lmi = [1e10]+[1e8]*5 
+#lmi = [1e10, 1e11, 7e10, 4e10, 4e10, 1e8]
 y1, y2 = 1e5, 1e12
 leta = [1e-3, 0.01, 0.1]
 plt.figure()
@@ -355,7 +387,7 @@ for i in range(len(lz)):
 	plt.loglog(lmh[sel], lms, label=r'$z={}$'.format(z), ls=lls[i], color=llc[i])
 for eta in leta:
 	plt.plot(lmh, lmh*fb*eta, '--', lw=3, color='gray', alpha=0.5)
-plt.plot(lmh, lmh*fb, '--', lw=3, color='gray', alpha=0.5, label=r'$\eta\sim 10^{-3}-1$')
+plt.plot(lmh, lmh*fb, '--', lw=3, color='gray', alpha=0.5, label=r'$\eta_{\star}\sim 10^{-3}-1$')
 plt.xlabel(r'$M_{\rm h}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$M_{\star}\ [\rm M_{\odot}]$')
 plt.text(m1*2, y2/3, r'$\eta_{\star,0}='+str(eta0)+'$')
@@ -368,7 +400,7 @@ plt.close()
 
 
 lm = np.geomspace(1e6, 1e12, 100)
-l = np.array(retxt('nsc_occ.txt', 7))
+l = np.array(retxt(cr+'nsc_occ.txt', 7))
 plt.figure()
 lf = focc_nsc(lm)
 plt.plot(10**l[0], l[1], 'r--', label='Early-type')
@@ -376,18 +408,18 @@ plt.fill_between(10**l[0], l[2], l[3], fc='r', alpha=0.2)
 sel = l[0]<11
 plt.plot(10**l[0][sel], l[4][sel], 'b-.', label='Late-type')
 plt.fill_between(10**l[0][sel], l[5][sel], l[6][sel], fc='b', alpha=0.2)
-plt.plot(10**l[0][sel], (l[1][sel]+l[4][sel])*0.5, 'k:', label='Mean')
-plt.plot(lm, lf, 'm-', label='Approx', lw=4.5, alpha=0.5)
+#plt.plot(10**l[0][sel], (l[1][sel]+l[4][sel])*0.5, 'k:', label='Mean')
+#plt.plot(lm, lf, '-', label='Approx.', lw=4.5, alpha=0.7, color='gray')
 plt.xscale('log')
 plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$f_{\rm NSC}$')
-plt.legend(loc=2)
+plt.legend(loc=2,ncol=2)
 plt.xlim(1e6, 1e12)
-plt.ylim(0, 1)
+plt.ylim(0, 1.)
 plt.tight_layout()
 plt.savefig('focc_nc.pdf')
 plt.close()
-"""
+#"""
 	
 #l = abhb_t(1e9, 100, 100, 100, 100, 0.5, 2, 1e7, 2, 0.5, 1)
 
@@ -409,9 +441,12 @@ sel_ = (m1>0)*(m2>0)
 lmbhb = m1+m2
 bhbnbody = [lmbhb[sel_],m1[sel_],m2[sel_],fbcata[3][sel][sel_],fbcata[4][sel][sel_]]
 totxt(repo+'bhbcata_nbody.txt',bhbnbody)
+fco = np.sum(bhbnbody[0])/(np.sum(fbcata[0])+np.sum(fbcata[1]))
+fbinary = 0.69
+print('Mass fraction of compact object binaries: {:.2e}'.format(fco))
 #print(np.sum(m1[sel_]==m2[sel_])/np.sum(sel_))
 
-#"""
+"""
 x1, x2 = 0, 20
 lz = np.linspace(x1, x2, 41)
 plt.figure()
@@ -442,10 +477,10 @@ y1, y2 = 10*(ntree/100), 3e4*(ntree/100)
 x1, x2 = 1e5, 1e11
 lmnsc = np.geomspace(x1, x2, 31)
 plt.figure()
-his, ed, pat = plt.hist(np.hstack([bhbcata[3],bhbroot[3]]), lmnsc, alpha=0.5, label=r'$f_{\rm occ}=1$, $M_{\rm NSC}>10^{5}\ \rm M_{\odot}$')
+his, ed, pat = plt.hist(np.hstack([bhbcata[3],bhbroot[3]]), lmnsc, alpha=0.5, label=r'$f_{\rm NSC}=1$, $M_{\star>10^{5}\ \rm M_{\odot}$')
 base = midbin(ed)
 mod = his*focc_nsc(base)
-plt.plot(base, mod, 'k-', marker='^', label=r'$f_{\rm occ}\equiv f_{\rm occ}(M_{\star})$ based on obs.')
+plt.plot(base, mod, 'k-', marker='^', label=r'$f_{\rm NSC}\equiv f_{\rm NSC}(M_{\star})$ based on obs.')
 plt.legend()
 plt.xscale('log')
 plt.yscale('log')
@@ -460,6 +495,8 @@ plt.close()
 GWrate = ntot1/ntree/Vcom * 1e9*YR/TZ(0)
 GWrate1 = np.sum(mod)/ntree/Vcom * 1e9*YR/TZ(0)
 print('Average BHB merger rate density ~ {:.2e} ({:.2e}) yr^-1 Gpc^-3'.format(GWrate, GWrate1))
+
+"""
 
 bhbm = np.array(retxt(drep+'bhb_mass_dis'+fs,2,2))
 bhbm0 = np.array(retxt(repref+'bhb_mass_dis'+fs,2,2))
@@ -480,20 +517,20 @@ fbhb1 = np.sum(bhbr1[1])/ntot10
 tt = r'$f_{\bullet}'+r'(<{:.1f}\ \rm pc)\simeq {:.1f}\ {}\ {:.1f}$ %'.format(r2,100*fbhb1,r'{\rm and}',100*fbhb0) + ', w and w/o DF'
 y1, y2 = 1e-6, 3
 plt.figure()
-plt.loglog(bhbr[0], np.cumsum(bhbr[1])/ntot, marker='o', label='Formation sites')
-plt.loglog(bhbr1[0],np.cumsum(bhbr1[1])/ntot10, 'k--', marker='^', label=r'Target halo (w/ DF, $e_{\rm if}='+str(eif)+'$)')
-plt.loglog(bhbr0[0],np.cumsum(bhbr0[1])/ntot, '-.', marker='x', label='Target halo (w/o DF)')
+plt.loglog(bhbr[0], np.cumsum(bhbr[1])/ntot, label='Formation sites') #, marker='o'
+plt.loglog(bhbr1[0],np.cumsum(bhbr1[1])/ntot10, 'k--', label=r'Target halo (w/ DF, $e_{\rm if}='+str(eif)+'$)') #, marker='^'
+plt.loglog(bhbr0[0],np.cumsum(bhbr0[1])/ntot, '-.', label='Target halo (w/o DF)') #, marker='x'
 x1, x2 = 4, 10
 y0, alp = 5e-3, 2
 plt.loglog([x1,x2], [y0, y0*(x2/x1)**alp], 'k:')#, label=r'$f_{\bullet}(<r)\propto r^{'+str(alp)+'}$')
 plt.text(x1*1.5, y0, r'$\propto r^{'+str(alp)+'}$')
-#x1, x2 = 10, 40
-#y0, alp = 1.2e-3, 0.5
-#plt.loglog([x1,x2], [y0, y0*(x2/x1)**alp], 'k:')#, label=r'$f_{\bullet}(<r)\propto r^{'+str(alp)+'}$')
-#plt.text(x1*1.5, y0*1.5**(alp+1), r'$\propto r^{'+str(alp)+'}$')
+x1, x2 = 10, 40
+y0, alp = 2e-4, 1.5
+plt.loglog([x1,x2], [y0, y0*(x2/x1)**alp], 'k:')#, label=r'$f_{\bullet}(<r)\propto r^{'+str(alp)+'}$')
+plt.text(x1*1.5, y0*1.5**(alp+1)*1.5, r'$\propto r^{'+str(alp)+'}$')
 plt.xlim(r1, r2)
 plt.ylim(y1, y2)
-plt.text(r1*1.1, y2/2.5,tt)
+plt.text(r1*1.1, y2/3,tt)
 plt.legend(loc=4,ncol=1)
 #plt.title('w/o dynamical friction')
 plt.xlabel(r'$r\ [\rm pc]$')
@@ -514,11 +551,10 @@ lm0 = np.geomspace(x1, x2, nb0+1)
 ntot = np.sum(bhbm[1])
 print('N_BHB per tree: {:.1f}'.format(ntot/ntree))
 plt.figure()
-his, ed, pat = plt.hist(lmbhb, lm0, alpha=0.5, label='Formation sites (N-body sim.)')
-plt.plot(bhbm[0], bhbm[1]*ntot0/ntot*nb/nb0, '--', marker='o', label='Formation sites (merger trees)')
-his, ed = np.histogram(np.hstack([bhbcata[0],bhbroot[0]]), lm)
-base = midbin(ed)
-plt.plot(bhbm[0], his*ntot0/ntot1*nb/nb0, 'k-', marker='^', label='Within NSCs (merger trees)')
+his1, ed = np.histogram(np.hstack([bhbcata[0],bhbroot[0]]), lm)
+plt.plot(bhbm[0], his1*ntot0/ntot1*nb/nb0, 'b-', marker='^', label=r'$r<3\ \rm pc$')
+his2, ed, pat = plt.hist(lmbhb, lm0, alpha=0.3, label='Formation sites (N-body sim.)')
+plt.plot(bhbm[0], bhbm[1]*ntot0/ntot*nb/nb0, 'k--', marker='o', label='Formation sites (merger trees)')
 plt.legend()
 plt.xlabel(r'$m_{\bullet}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$dN/d\log m_{\bullet}\ [\rm a.u.]$')
@@ -591,8 +627,8 @@ def mnc_mg(mg, sc=0.6, seed=2333):
 
 logmc = np.log10(mcut)
 seed = 2333
-msr0 = np.array(retxt('nsc_early.txt',2))
-msr1 = np.array(retxt('nsc_late.txt',2))
+msr0 = np.array(retxt(cr+'nsc_early.txt',2))
+msr1 = np.array(retxt(cr+'nsc_late.txt',2))
 m0, re0 = 10**msr0
 m1, re1 = 10**msr1
 
@@ -643,7 +679,7 @@ lrmoc = rg_reff(lreffmoc, assign_g(lmmoc,seed*2))
 x1, x2 = 1e5, 1e9
 plt.figure(figsize=(6,8))
 plt.subplot(211)
-y1, y2 = 0.7, 1e2
+y1, y2 = 0.7, 3e2
 plt.loglog(m0, re0, 'o', color='r', label='Early-type', alpha=0.7)
 plt.loglog(m1, re1, '^', color='b', label='Late-type', alpha=0.7)
 plt.errorbar([2.5e7], [6.5], xerr=[1.8e7], yerr=[2.7], marker='*', label='MW', color='g', markersize=16)
@@ -669,10 +705,14 @@ plt.tight_layout()
 plt.savefig('rnc_mnc.pdf')
 plt.close()
 #"""
+def fGW(M, a, e):
+	out = (GRA*M*Msun)**0.5/np.pi
+	out *= (1+e)**1.1954/(a*(1-e**2))**1.5
+	return out
 	
 def plot_bhb(d, lab, rep='./', mode=0, aflag=0, y1=0, log=1, gyr=0, sep=0):
 	l = d['l']
-	m1, m2, a0, e0, r0, e, M, R, g, H, lnL, kap, cd = d['para']
+	m1, m2, a0, e0, r0, e, M, R, g, H, lnL, kap, cd, eflag = d['para']
 	tdes, tmg, pev, tdf0, aej, tmg_ej = d['out']
 	ana = d['ana']
 	x2 = np.max(l[0]/1e6*1.01)
@@ -686,7 +726,7 @@ def plot_bhb(d, lab, rep='./', mode=0, aflag=0, y1=0, log=1, gyr=0, sep=0):
 		tt1 = r'$m_{}={}\ \rm M_{}$, $m_{}={}\ \rm M_{}$, $a_{}={}\ \rm au$, $e_{}={}$, '.format(1,m1,'\odot',2,m2,'\odot',0,a0,0,e0)+'\n'+r'$H={}$, $\kappa={}$: ${}={:.1f}\ \rm Myr$'.format(H,kap,r'\hat{t}_{\rm mg}',tmg/1e6) #$\ln\Lambda={}$
 	else:
 		tt1 = r'$m_{}={}\ \rm M_{}$, $m_{}={}\ \rm M_{}$, $a_{}={}\ \rm au$, $e_{}={}$, '.format(1,m1,'\odot',2,m2,'\odot',0,a0,0,e0)+'\n'+r'$H={}$, $\kappa={}$: ${}={:.3f}\ ({:.3f})\ \rm Gyr$'.format(H,kap,r'\hat{t}_{\rm mg}',tmg/1e9, tmg_ej/1e9) #$\ln\Lambda={}$
-	tt2 = r'$M_{}={:.1e}\ \rm M_{}$, $R_{}={}\ \rm pc$, $\gamma={}$, ${}={}$, '.format(r'{\rm NSC}', M, '\odot', r'{\rm NSC}', R, g, r'\Delta_{\rm c}', cd)+'\n'+r'$r_{}={}\ \rm pc$, $e_{}={}$: ${}={:.1f}\ \rm Myr$'.format(0, r0, r'{\rm if}', e, r'\hat{t}_{\rm df}', tdf0/1e6)
+	tt2 = r'$M_{}={:.1e}\ \rm M_{}$, $R_{}={}\ \rm pc$, $\gamma={}$, ${}={}$, '.format(r'{\rm NSC}', M, '\odot', r'{\rm NSC}', R, g, r'\Delta_{\rm c}', cd)+'\n'+r'$r_{}={}\ \rm pc$, $e_{}={}$: ${}={:.1f}\ \rm Myr$'.format(0, r0, r'{\rm if}', e, r'\hat{t}_{\rm DF}', tdf0/1e6)
 	plt.figure(figsize=(11,12))
 	if y1==0:
 		y1 = 0.1*Rsun/AU
@@ -781,8 +821,8 @@ def plot_bhb(d, lab, rep='./', mode=0, aflag=0, y1=0, log=1, gyr=0, sep=0):
 		plt.clim(0, 20)
 		cb = plt.colorbar()#orientation='horizontal')
 		cb.ax.set_title(r'$\tau_{\rm GW}\ [\rm Gyr]$')
-	plt.plot(xb, l[-3], 'm--', label=r'$a_{\rm GW}$')
-	plt.plot(xb, l[-4]/1e2, 'k:', label=r'$10^{-2}a_{\rm HDB}$')
+	#plt.plot(xb, l[-3], 'm--', label=r'$a_{\rm GW}$')
+	#plt.plot(xb, l[-4]/1e2, 'k:', label=r'$10^{-2}a_{\rm HDB}$')
 	if aej>y1:
 		plt.plot(xr, [aej]*2, color='b', ls='-.', label=r'$a_{\rm ej}$')
 	if mode==0 and aflag>0:
@@ -796,6 +836,25 @@ def plot_bhb(d, lab, rep='./', mode=0, aflag=0, y1=0, log=1, gyr=0, sep=0):
 	#plt.title(tt1)
 	plt.tight_layout()
 	plt.savefig(rep+'a_t_{}.pdf'.format(lab))
+	plt.close()
+	
+	plt.figure()
+	y1, y2 = max(np.min(l[2])*0.5, 1e-5), 1.1
+	lfgw = fGW(m1+m2, l[1]*AU, l[2])
+	#print(lfgw)
+	plt.scatter(lfgw, l[2], c=np.log10(l[1]))
+	cb = plt.colorbar()
+	cb.ax.set_title(r'$\log(a\ [\rm au])$')
+	plt.plot([0.1]*2,[y1,y2],'k', lw=0.5)
+	plt.plot([1.0]*2,[y1,y2],'k', lw=0.5)
+	plt.xlabel(r'$f_{\rm GW}\ [\rm Hz]$')
+	plt.ylabel(r'$e$')
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.xlim(1e-4, 1e3)
+	plt.ylim(y1, y2)
+	plt.tight_layout()
+	plt.savefig(rep+'e_fgw_{}.pdf'.format(lab))
 	plt.close()
 
 def vesc(M, rho):
@@ -859,6 +918,8 @@ def abhb_t(t2, nt, m1, m2, a0, e0, r0, M, R, e=0.5, g=1, alpha=-0.67, beta=1.76,
 		r = r_t(t)
 		dadt = dadtGW(a, e, m1*Msun, m2*Msun) + dadt3b(a, rho_r(r), sigma_r(r), H)
 		dedt = dedtGW(a, e, m1*Msun, m2*Msun) + dedt3b(a, rho_r(r), sigma_r(r), H, kap)
+		if e==emax:
+			dedt = min(dedt, 0)#emax-y[1])
 		return [dadt, dedt]
 	amin = 6*GRA*(m1+m2)*Msun/SPEEDOFLIGHT**2
 	def merger(t, y):
@@ -874,6 +935,8 @@ def abhb_t(t2, nt, m1, m2, a0, e0, r0, M, R, e=0.5, g=1, alpha=-0.67, beta=1.76,
 	lt = sol.t/YR #np.hstack([sol.t, sol.t_events[0]])/YR
 	la = sol.y[0]/AU #np.hstack([sol.y[0], sol.y_events[0][0]])/AU
 	le = sol.y[1] #np.hstack([sol.y[1], sol.y_events[0][1]])
+	le[le<0] = 0
+	eflag = np.sum(le>=1)
 	le[le>emax] = emax
 	tmg = np.max(lt)
 	lr = r_t(sol.t)
@@ -907,7 +970,7 @@ def abhb_t(t2, nt, m1, m2, a0, e0, r0, M, R, e=0.5, g=1, alpha=-0.67, beta=1.76,
 	else:
 		tmg_ej = tmg
 	out = [tdes, tmg, pev, tdf0/beta/YR, aej, tmg_ej]
-	para = [m1, m2, a0, e0, r0, e, M, R, g, H, lnL, kap, cd]
+	para = [m1, m2, a0, e0, r0, e, M, R, g, H, lnL, kap, cd, eflag]
 	l = lt, la, le, la*AU/amin, rat1, rat2, rat3, rat4, lr, lrho/Msun*PC**3, lsigma/1e5, lahd, lagw, ltev, ltgw
 	d = {}
 	d['l'] = l
@@ -921,7 +984,7 @@ def abhb_t(t2, nt, m1, m2, a0, e0, r0, M, R, e=0.5, g=1, alpha=-0.67, beta=1.76,
 		print(r'rmin={:.2e} pc, amin={:.2e} au, aej={:.2e} au, vesc={:.2f} km/s'.format(rmin, amin/AU, aej, np.max(vesc0)/1e5))
 	return d
 
-def evo_bhb_nsc(cata, kap=0.1, cd=100, ro = 3.0, sct=0.32, seed=2333, mfield=1, edis=0,tend=15e9,fac=1):
+def evo_bhb_nsc(cata, kap=0.1, cd=100, ro = 3.0, sct=0.32, seed=2333, mfield=1, edis=0,tend=15e9,fac=1,fgw0=1,fub=1):
 	raw = np.array(cata).T
 	lm = cata[4]
 	lm1, lm2 = cata[5], cata[6]
@@ -936,6 +999,7 @@ def evo_bhb_nsc(cata, kap=0.1, cd=100, ro = 3.0, sct=0.32, seed=2333, mfield=1, 
 	nrdm.seed(seed*3)
 	n = len(lm)
 	out = []
+	ndes = 0
 	for i in range(n):
 		if i%1000==0 or i==n-1:
 			print('{:.4f}%'.format(100*(i+1)/n))
@@ -949,15 +1013,21 @@ def evo_bhb_nsc(cata, kap=0.1, cd=100, ro = 3.0, sct=0.32, seed=2333, mfield=1, 
 		#if la[i]>ahd or la[i]*AU>lrc[i]*PC/cd**(1/lg[i]):
 		if la[i]>ahd or la[i]*AU>lrc[i]*PC/cd**(1/lg[i]):
 			continue
-		if lrc[i]>ro:
-			r0 = ro
-		else:
-			r0 = nrdm.uniform()*(ro-lrc[i]) + lrc[i]
+		#if lrc[i]>ro:
+		#	r0 = ro
+		#else:
+		#	r0 = nrdm.uniform()*(ro-lrc[i]) + lrc[i]
+		r0 = ro
 		if edis>0:
 			e = nrdm.uniform()**0.5
 		else:
 			e = 0.0
 		d = abhb_t(tend,0,lm1[i],lm2[i],la[i],le[i],r0,lmc[i],lrc[i],e,lg[i],kap=kap,cd=cd)
+		if d['para'][-1]>0:
+			#print('Destroyed!')
+			ndes += 1
+			if fub>0:
+				continue
 		tif = TZ(lzif[i])/YR
 		tmg = d['out'][-1]
 		tmg0 = d['out'][1]
@@ -966,10 +1036,19 @@ def evo_bhb_nsc(cata, kap=0.1, cd=100, ro = 3.0, sct=0.32, seed=2333, mfield=1, 
 		if tmg+tif>TZ(0)/YR:
 			z = -1
 		else:
-			z = ZT(np.log10((tmg+tif)/1e9))
-		ly = [z, tmg0, tmg, d['out'][3]]
+			z = min(ZT(np.log10((tmg+tif)/1e9)), lzif[i])
+		lfgw = fGW(lm1[i]+lm2[i], d['l'][1]*AU, d['l'][2])
+		#selfgw = lfgw<=fgw0
+		#eout = d['l'][2][selfgw]
+		selfgw = lfgw>fgw0
+		if np.sum(selfgw)==0:
+			eout = d['l'][2][-1]
+		else:
+			eout = np.max(d['l'][2][selfgw])
+		ly = [eout, z, tmg0, tmg, d['out'][3]]
 		#print(i, ly)
 		out.append(np.hstack([raw[i],ly]))
+	print('Destroyed fraction: {:.2e}'.format(ndes/n))
 	return np.array(out).T
 
 def nsc_regu(dmg, seed=1314):
@@ -996,13 +1075,51 @@ def gw190521_sel(dmg,m1d=71,m1u=106,md=133,mu=179):
 		if ma>=m1d and ma<=m1u and m>=md and m<=mu:
 			out.append(raw[i])
 	return np.array(out).T
+	
+def ppisn_sel(dmg,md=55,mu=85):
+	raw = np.array(dmg).T
+	n = len(raw)
+	out = []
+	for i in range(n):
+		m1, m2 = raw[i][5], raw[i][6]
+		#ma = max(m1, m2)
+		#m = m1 + m2
+		#if ma>=m1d and ma<=m1u and m>=md and m<=mu:
+		if (m1>=md and m1<=mu) or (m2>=md and m2<=mu):
+			out.append(raw[i])
+	return np.array(out).T
 
 def mchirp(m1, m2):
 	return (m1*m2)**0.6/(m1+m2)**0.2
 
+def event_dis(x, xp, xm, lx, ed, fac=1.7):
+	n = len(x)
+	y = np.zeros(lx.shape[0])
+	for i in range(n):
+		sel1 = lx>x[i]
+		sel2 = lx<=x[i]
+		s1 = xp[i]/fac
+		s2 = xm[i]/fac
+		y[sel1] += np.exp(-(lx[sel1]-x[i])**2/(2*s1**2))/s1/(2*np.pi)**0.5
+		y[sel2] += np.exp(-(lx[sel2]-x[i])**2/(2*s2**2))/s2/(2*np.pi)**0.5
+	n0 = len(ed)
+	out = np.zeros(n0-1)
+	for i in range(n0-1):
+		sel = (lx>ed[i])*(lx<=ed[i+1])
+		out[i] = np.trapz(y[sel],lx[sel])
+	return out
+
+#ligo = np.array(retxt(cr+'LIGO_O3a.txt',6))
+ligo = np.array(retxt(cr+'ogc3.txt',22,1))
+#95.3 28.7 18.9 69.0 22.7 23.1
+#ind0 = np.argmax(ligo[2])
+#print(ligo[0][ind0])
+
 if __name__=='__main__':
 	fac = 1
 	cata = np.array(retxt(repo+'bhbcata.txt',9))
+	cata1 = nsc_regu(cata)
+	llab = ['CS', 'OP']
 	
 	"""
 	bhbnbody = np.array(bhbnbody)
@@ -1041,18 +1158,19 @@ if __name__=='__main__':
 		cd = 100.0
 		kap = 0.1
 		y0, b = 2, 1/5
-		z01, y01, b1 = 6, 1, 1/7
+		z01, y01, b1 = 6, 1, 1/6
 		nt = 50
 		t1, t2 = 1e-1, 1.5e4
-		red = 6
+		red = 5.5
 	if not os.path.exists(repo):
 		os.makedirs(repo)
 		
 	if mode==0:
-		dmg = evo_bhb_nsc(cata,cd=cd,kap=kap,seed=seed,fac=fac)
+		dmg = evo_bhb_nsc(cata,cd=cd,kap=kap,seed=seed,fac=fac,fgw0=fgw0,fub=fub)
+		#print(dmg.shape)
 		totxt(repo+'bhbmerger.txt',dmg)
 	else:
-		dmg = np.array(retxt(repo+'bhbmerger.txt',13))
+		dmg = np.array(retxt(repo+'bhbmerger.txt',14))
 	
 	dmg1 = nsc_regu(dmg)
 	dmg2 = gw190521_sel(dmg)
@@ -1072,10 +1190,12 @@ if __name__=='__main__':
 	mrd1 = his1/dt/ntree/Vcom * 1e9 * fbn*fnsc0/fnsc
 	mrd2 = his2/dt/ntree/Vcom * 1e9 * fbn*fnsc0/fnsc
 	mrd3 = his3/dt/ntree/Vcom * 1e9 * fbn*fnsc0/fnsc
+	print('Peak MRD = {:.2e} yr^-1 Gpc^-3 at z = {:.1f}'.format(np.max(mrd), zbase[np.argmax(mrd)]))
+	print('Peak MRD = {:.2e} yr^-1 Gpc^-3 at z = {:.1f}'.format(np.max(mrd1), zbase[np.argmax(mrd1)]))
 	y1, y2 = 1e-2, 100/(11-op*10)
 	plt.figure()
-	plt.plot(zbase, mrd, label=r'$f_{\rm occ}=1$, $M_{\rm NSC}>10^{5}\ \rm M_{\odot}$')
-	plt.plot(zbase, mrd1, '--', label=r'$f_{\rm occ}\equiv f_{\rm occ}(M_{\star})$ based on obs.')
+	plt.plot(zbase, mrd, label=llab[op]+'_F')#r'$f_{\rm NSC}=1$, $M_{\star}>10^{5}\ \rm M_{\odot}$')
+	plt.plot(zbase, mrd1, '--', label=llab[op]+'_P')#r'$f_{\rm NSC}\equiv f_{\rm NSC}(M_{\star})$ based on obs.')
 	plt.plot(zbase, mrd2, 'k-.', label='GW190521-like')
 	plt.plot(zbase, mrd3, 'k-.')#, label='GW190521-like')
 	plt.fill_between([x1, zcol],[y1,y1],[y2,y2],fc='gray',alpha=0.3)
@@ -1095,15 +1215,20 @@ if __name__=='__main__':
 	plt.savefig(repo+'mrd_z.pdf')
 	plt.close()
 	
+	print('Occ reduction factor:', len(cata[0])/len(cata1[0]))
 	sel = dmg[-4]>0
-	print('HDB (merge) fraction: {:.2e} ({:.8e})'.format(np.sum(sel)/len(cata[0]), np.sum(sel)/len(dmg[0])))
-	print('Ejection fraction: {:.2e}'.format(1-np.sum(dmg[-3]==dmg[-2])/len(dmg[0])))
+	print('HDB (merge) fraction: {:.4e} ({:.8e})'.format(np.sum(sel)/len(cata[0]), np.sum(sel)/len(dmg[0])))
+	print('Ejection fraction: {:.4e}'.format((len(dmg[0])-np.sum(dmg[-3]==dmg[-2]))/len(cata[0])))
 	sel = dmg1[-4]>0
-	print('HDB (merge) fraction: {:.2e} ({:.8e})'.format(np.sum(sel)/len(cata[0]), np.sum(sel)/len(dmg1[0])))
-	print('Ejection fraction: {:.2e}'.format(1-np.sum(dmg1[-3]==dmg1[-2])/len(dmg1[0])))
+	print('HDB (merge) fraction: {:.4e} ({:.8e})'.format(np.sum(sel)/len(cata[0]), np.sum(sel)/len(dmg1[0])))
+	print('Ejection fraction: {:.4e}'.format((len(dmg1[0])-np.sum(dmg1[-3]==dmg1[-2]))/len(cata1[0])))
 	sel = dmg2[-4]>0
-	print('HDB (merge) fraction: {:.2e} ({:.8e})'.format(np.sum(sel)/len(cata[0]), np.sum(sel)/len(dmg2[0])))
-	print('Ejection fraction: {:.2e}'.format(1-np.sum(dmg2[-3]==dmg2[-2])/len(dmg2[0])))
+	print('HDB (merge) fraction: {:.4e} ({:.8e})'.format(np.sum(sel)/len(cata[0]), np.sum(sel)/len(dmg2[0])))
+	#print('Ejection fraction: {:.4e}'.format(1-np.sum(dmg2[-3]==dmg2[-2])/len(dmg2[0])))
+	sel = dmg3[-4]>0
+	print('HDB (merge) fraction: {:.4e} ({:.8e})'.format(np.sum(sel)/len(cata[0]), np.sum(sel)/len(dmg3[0])))
+	#print('Ejection fraction: {:.4e}'.format(1-np.sum(dmg3[-3]==dmg3[-2])/len(dmg3[0])))
+
 	
 	log = 1
 	#t1, t2 = 1e-3, 1e3
@@ -1113,8 +1238,8 @@ if __name__=='__main__':
 		ted = np.linspace(t1, t2, nt+1)
 	y1, y2 = 0.5, 5e4*(60/nt)*(ntree/100)
 	plt.figure()
-	plt.hist(dmg[-2]/1e6,ted, alpha=0.5, label=r'$f_{\rm occ}=1$, $M_{\rm NSC}> 10^{5}\ \rm M_{\odot}$')
-	plt.hist(dmg1[-2]/1e6,ted, histtype='step',lw=1.5, label=r'$f_{\rm occ}\equiv f_{\rm occ}(M_{\star})$ based on obs.')
+	plt.hist(dmg[-2]/1e6,ted, alpha=0.5, label=llab[op]+'_F')#r'$f_{\rm NSC}=1$, $M_{\star}> 10^{5}\ \rm M_{\odot}$')
+	plt.hist(dmg1[-2]/1e6,ted, histtype='step',lw=1.5, label=llab[op]+'_P')#r'$f_{\rm NSC}\equiv f_{\rm NSC}(M_{\star})$ based on obs.')
 	plt.legend()
 	plt.xlim(t1,t2)
 	plt.ylim(y1, y2)
@@ -1129,35 +1254,65 @@ if __name__=='__main__':
 	plt.savefig(repo+'tdelay_dis.pdf')
 	plt.close()
 	
+	sel = (dmg[-4]>0)*(dmg[1]>=dmg[-4])
+	sel1 = (dmg1[-4]>0)*(dmg1[1]>=dmg1[-4])
+	
+	leo = dmg[-5][sel*(dmg[-5]>=0)]
+	leo1 = dmg1[-5][sel1*(dmg1[-5]>=0)]
+	eref = 0.1
+	print('Fraction with e data: {:.2e} (F)'.format(len(leo)/np.sum(sel)))
+	print('Fraction of e({} Hz)>{}: {:.2e} (F)'.format(fgw0, eref, np.sum(leo>eref)/np.sum(sel)))
+	print('Fraction with e data: {:.2e} (P)'.format(len(leo1)/np.sum(sel1)))
+	print('Fraction of e({} Hz)>{}: {:.2e} (P)'.format(fgw0, eref, np.sum(leo1>eref)/np.sum(sel1)))
+	e1, e2 = 1e-5, 1
+	ne = 50
+	eed = np.geomspace(e1, e2, ne+1)
+	y1, y2 = 0.5, 100*ntree
+	plt.figure()
+	plt.hist(leo, eed, alpha=0.3, label=llab[op]+'_F')
+	plt.hist(leo1, eed, histtype='step', lw=1.5, ls='-', color='b', label=llab[op]+'_P')
+	plt.xlim(e1, e2)
+	plt.ylim(y1, y2)
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.legend()
+	plt.xlabel(r'$e (f_{\rm gw}='+str(fgw0)+r'\ \rm Hz)$')
+	plt.ylabel(r'$dN/d\log e\ [\rm a.u.]$')
+	plt.tight_layout()
+	plt.savefig(repo+'eend_dis.pdf')
+	plt.close()
+	
 	log = 1
-	nt = 40
-	t1, t2 = 0.3, 3e3
+	nt = 35
+	t1, t2 = 3, 1e4
 	if log>0:
 		ted = np.geomspace(t1, t2, nt+1)
 	else:
 		ted = np.linspace(t1, t2, nt+1)
-	y1, y2 = 0.5, 1e5*(32/nt)*(ntree/100)
+	y1, y2 = 0.5, 1e5*(35/nt)*(ntree/100)
 	plt.figure()
-	plt.hist(dmg[-1]/1e6,ted, alpha=0.5, label=r'$f_{\rm occ}=1$, $M_{\rm NSC}>10^{5}\ \rm M_{\odot}$')
-	plt.hist(dmg1[-1]/1e6,ted, histtype='step',lw=1.5, label=r'$f_{\rm occ}\equiv f_{\rm occ}(M_{\star})$ based on obs.')
+	plt.hist(dmg[-1]/1e6,ted, alpha=0.3, label=llab[op]+'_F (all in NSCs)')
+	plt.hist(dmg[-1][sel]/1e6,ted, histtype='step',lw=1.5, ls='-', color='b', label=llab[op]+r'_F (merged at $z>0$)')
+	plt.hist(dmg1[-1]/1e6,ted, histtype='step',lw=1.5, ls='--', color='k', label=llab[op]+'_P (all in NSCs)')
+	plt.hist(dmg1[-1][sel1]/1e6,ted, histtype='step',lw=1.5, ls='-.', color='r', label=llab[op]+r'_P (merged at $z>0$)')
 	plt.legend()
 	plt.xlim(t1,t2)
 	plt.ylim(y1, y2)
-	plt.xlabel(r'$\hat{t}_{\rm df}\ [\rm Myr]$')
+	plt.xlabel(r'$\hat{t}_{\rm DF}\ [\rm Myr]$')
 	if log>0:
 		plt.xscale('log')
 		plt.yscale('log')
-		plt.ylabel(r'$dN/d\log \hat{t}_{\rm df}\ [\rm a.u.]$')
+		plt.ylabel(r'$dN/d\log \hat{t}_{\rm DF}\ [\rm a.u.]$')
 	else:
-		plt.ylabel(r'$dN/d\hat{t}_{\rm df}\ [\rm a.u.]$')
+		plt.ylabel(r'$dN/d\hat{t}_{\rm DF}\ [\rm a.u.]$')
 	plt.tight_layout()
 	plt.savefig(repo+'tdf_dis.pdf')
 	plt.close()
 	
 	log = 0
-	lm1, lm2 = dmg[5], dmg[6]
-	lm = dmg[4] #lm1+lm2
-	sel = (lm>55)*(lm<70)
+	lm1, lm2 = dmg[5][sel], dmg[6][sel]
+	lm = dmg[4][sel] #lm1+lm2
+	#sel = (lm>55)*(lm<70)
 	#print(np.sum(sel))
 	#lm = bhbnbody[0]
 	#print(np.sum(lm1==lm2)/len(lm1))
@@ -1168,23 +1323,40 @@ if __name__=='__main__':
 	lmc = mchirp(lm1, lm2)
 	lm1, lm2 = dmg1[5], dmg1[6]
 	lmc1 = mchirp(lm1, lm2)
+	lmcligo = ligo[7] #mchirp(ligo[0],ligo[3])
+	lmligo = ligo[1] + ligo[4]
+	#print('Chirp mass of GW190521: ', mchirp(85, 66))
 	nm = 40
+	nm0 = 20
+	nm1 = 20
 	if log>0:
-		y1, y2 = 1, 3e4*(ntree/100)
+		y1, y2 = 1, 3e4*(ntree/100)*(40/nm)
 		x1 = 1
 		x2 = 100
 		med = np.geomspace(x1, x2, nm+1)
+		med0 = np.geomspace(x1, x2, nm0+1)
+		med1 = np.geomspace(x1, x2, nm1+1)
 	else:
-		y1, y2 = 1, 6e3*(ntree/100)
+		y1, y2 = 1, 5e3*(ntree/100)*(40/nm)*(2+op)/3
 		x1 = 0
 		x2 = 100
 		med = np.linspace(x1, x2, nm+1)
+		med0 = np.linspace(x1, x2, nm0+1)
+		med1 = np.linspace(x1, x2, nm1+1)
+	#mbase = midbin(med1)
+	#lmdis = np.linspace(x1, x2, 10000)
+	#mcdisligo = event_dis(ligo[7], ligo[8], ligo[9], lmdis, med1)*len(lm)/len(lmcligo)*nm1/nm
+	#mdisligo = event_dis(lmligo/2.0, (ligo[2]**2+ligo[5]**2)**0.5/2.0, (ligo[3]**2+ligo[6]**2)**0.5, lmdis, med1)*len(lm)/len(lmcligo)*nm1/nm
 	plt.figure()
-	plt.hist(lmc, med, label=r'$m_{\rm chirp}$', alpha=0.5)
-	plt.hist(lmc1, med, histtype='step', lw=1.5, ls='-', label=r'$m_{\rm chirp}$, $f_{\rm occ}(M_{\star})<1$', color='b', weights=np.ones(len(lmc1))*len(lm)/len(lm1))
-	plt.hist(lm/2.0, med, histtype='step', lw=1.5, ls='--', label=r'$m_{\bullet}/2$', color='k')
-	plt.hist(lma, med, histtype='step', lw=1.5, ls='-.', label=r'$m_{1}$', color='r')
-	plt.hist(lmb, med, histtype='step', lw=1.5, ls=':', label=r'$m_{2}$',color='g')
+	plt.hist(lmc, med, label=r'$m_{\rm chirp}$, OP_F', alpha=0.3)
+	#plt.hist(lmc1, med, histtype='step', lw=1.5, ls='-', label=r'$m_{\rm chirp}$, $f_{\rm NSC}(M_{\star})<1$', color='b', weights=np.ones(len(lmc1))*len(lm)/len(lm1))
+	plt.hist(lm/2.0, med, histtype='step', lw=1.5, ls='-', label=r'$m_{\bullet}/2$, OP_F', color='b')
+	plt.hist(lmcligo, med0, histtype='step', lw=1.5, ls='--', label=r'$m_{\rm chirp}$, 3-OGC', color='k', weights=np.ones(len(lmcligo))*len(lm)/len(lmcligo)*nm0/nm)
+	#plt.plot(mbase, mcdisligo, 'r:')
+	plt.hist(lmligo/2.0, med0, histtype='step', lw=1.5, ls='-.', label=r'$m_{\bullet}/2$, 3-OGC', color='r', weights=np.ones(len(lmligo))*len(lm)/len(lmligo)*nm0/nm)
+	#plt.plot(mbase, mdisligo, 'k:')
+	#plt.hist(lma, med, histtype='step', lw=1.5, ls='-.', label=r'$m_{1}$', color='orange')
+	#plt.hist(lmb, med, histtype='step', lw=1.5, ls=':', label=r'$m_{2}$',color='g')
 	plt.legend(loc=1,ncol=2)
 	if log>0:
 		plt.xscale('log')
@@ -1199,76 +1371,201 @@ if __name__=='__main__':
 	plt.tight_layout()
 	plt.savefig(repo+'mass_dis.pdf')
 	plt.close()
-	"""
+	
+	y1, y2 = 0, 0.05
+	m1ref0 = np.array(retxt(cr+'m1_3ogc_0.txt',2))
+	m1ref1 = np.array(retxt(cr+'m1_3ogc_1.txt',2))
 	plt.figure()
-	plt.plot(lm1, lm2, '.', alpha=0.5)
+	plt.hist(lma, med, label=r'OP_F', alpha=0.3, density=True)
+	plt.plot(*m1ref0, label='Observed, 3-OGC')
+	plt.plot(*m1ref1, 'k--', label='Reweighted, 3-OGC')
+	plt.legend(loc=1,ncol=1)
+	if log>0:
+		plt.xscale('log')
+		plt.yscale('log')
+		plt.ylabel(r'p(m_{1}) [$\rm M_{\odot}^{-1}$]')
+	else:
+		#plt.yscale('log')
+		plt.ylabel(r'$p(m_{1})\ [\rm M_{\odot}^{-1}$]')
 	plt.xlabel(r'$m_{1}\ [\rm M_{\odot}]$')
-	plt.xlabel(r'$m_{2}\ [\rm M_{\odot}]$')
+	plt.xlim(x1, x2)
+	plt.ylim(y1, y2)
 	plt.tight_layout()
-	plt.savefig(repo+'m2_m1.pdf')
+	plt.savefig(repo+'m1_dis.pdf')
 	plt.close()
+	
+	#sel = dmg[-4]>0
+	print('NS-BH fraction: {:.4e}'.format(np.sum((lmb<=3)*(lma>3))/np.sum(sel)))
+	print('NS-NS fraction: {:.4e}'.format(np.sum((lmb<=3)*(lma<=3))/np.sum(sel)))
+	
+	mlow = 11
+	mlows = 20
+	#nlow = np.sum((lmb<=mlow)*(lma<=mlow))
+	#print('Reducrion factor for mlow={:.1f} Msun: {:.4e}'.format(mlow,nlow/np.sum(sel)*(bhmax-1)/(mlow-1)))
 	"""
+	his, ed = np.histogram(lm, np.geomspace(bhb_min, bhb_max, nb+1))
+	print('Mass base:', bhbm[0])
+	f1 = np.sum(his)/np.sum(bhbm[1])
+	f2 = np.sum(his[bhbm[0]<mlow])/np.sum(bhbm[1][bhbm[0]<mlow])
+	print(f1, f2, f1/f2*(mlows-1)/(bhmax-1)*(bhmax-bhmin)/(bhmax-1)*(mlows-1)/(mlows-bhmin), (mlows-1)/(bhmax-1)*(bhmax-bhmin)/(bhmax-1)*(mlows-1)/(mlows-bhmin))
+	print(his/bhbm[1])
+	"""
+	selligo = (lma<50)*(lmb<20)*(lmb>3)
+	print('Fraction of low mass BH-BH mergers: {:.4e}'.format(np.sum(selligo)/len(lma)))
 	
 	nq = 1000
 	qed = np.linspace(0, 1, nq+1)
 	lq = lmb/lma
+	lq0 = cata[6]/cata[5]
+	lq0[lq0>1] = 1.0/lq0[lq0>1]
 	print('Median mass ratio: {:.2f}'.format(np.median(lq)))
-	his, ed = np.histogram(lq, qed)
-	plt.plot(ed[:-1], np.cumsum(his)/np.sum(his))
-	plt.plot([0,1],[0.5]*2, 'k--')
+	hisq, ed = np.histogram(lq, qed)
+	hisq0, ed = np.histogram(lq0, qed)
+	plt.figure()
+	#plt.plot(ed[:-1], np.cumsum(his)/np.sum(his), 'b-', label='$x=q$ (merged at $z>0$)')
+	#plt.plot([0.5]*2,[0,1], 'k-', lw=0.5)
+	plt.plot([0,1],[0.5]*2, 'k-', lw=0.5)
+	plt.plot([0,1],[0,1], 'k:')
 	#plt.yscale('log')
-	plt.xlim(0, 1)
-	plt.ylim(0, 1)
-	plt.xlabel(r'$q\equiv m_{2}/m_{1}$')
-	plt.ylabel(r'$N(<q)/N_{\rm tot}$')
-	plt.tight_layout()
-	plt.savefig(repo+'q_dis.pdf')
-	plt.close()
+	#plt.xlim(0, 1)
+	#plt.ylim(0, 1)
+	#plt.xlabel(r'$q\equiv m_{2}/m_{1}$')
+	#plt.ylabel(r'$N(<q)/N_{\rm tot}$')
+	#plt.tight_layout()
+	#plt.savefig(repo+'q_dis.pdf')
+	#plt.close()
 
 	nq = 1000
 	qed = np.linspace(0, 1, nq+1)
-	le = dmg[8]
+	le = dmg[8][sel]
+	le0 = cata[8]
 	print('Median initial eccentricity: {:.2f}'.format(np.median(le)))
 	his, ed = np.histogram(le, qed)
-	plt.plot(ed[:-1], np.cumsum(his)/np.sum(his))
-	plt.plot([0,1],[0.5]*2, 'k--')
+	his0, ed = np.histogram(le0, qed)
+	plt.plot(ed[:-1], np.cumsum(his0)/np.sum(his0), 'm-', lw=4.5, alpha=0.5, label='$x=e_{0}$ (all in NSCs)')
+	plt.plot(ed[:-1], np.cumsum(his)/np.sum(his), 'b-', label='$x=e_{0}$ (merged at $z>0$)')
+	plt.plot(ed[:-1], np.cumsum(hisq0)/np.sum(hisq0), 'k--', label='$x=q$ (all in NSCs)')
+	plt.plot(ed[:-1], np.cumsum(hisq)/np.sum(hisq), 'r-.', label='$x=q$ (merged at $z>0$)')
+	#plt.plot([0,1],[0.5]*2, 'k--')
 	#plt.yscale('log')
+	plt.legend()
 	plt.xlim(0, 1)
 	plt.ylim(0, 1)
-	plt.xlabel(r'$e_{0}$')
-	plt.ylabel(r'$N(<e_{0})/N_{\rm tot}$')
+	plt.xlabel(r'$x=e_{0}$, $q\equiv m_{2}/m_{1}$')
+	plt.ylabel(r'$N(<x)/N_{\rm tot}$')
 	plt.tight_layout()
-	plt.savefig(repo+'e_dis.pdf')
+	plt.savefig(repo+'q_e_dis.pdf')
 	plt.close()	
+	print('q_min={:.4e}'.format(np.min(lq)))
 
-	sel = dmg[-4]>0
-	y1, y2 = 10*(ntree/100), 1e5*(ntree/100)
+	y1, y2 = 10*(ntree/100), 5e4*(ntree/100)
 	x1, x2 = 1e5, 1e8
-	lmnsc = np.geomspace(x1, x2, 31)
+	lmnsc = np.geomspace(x1, x2, 25)
 	plt.figure()
-	plt.hist(dmg[2][sel], lmnsc, alpha=0.5)
+	plt.hist(cata[2], lmnsc, alpha=0.3, label='All in NSCs')
+	plt.hist(dmg[2][sel], lmnsc, histtype='step', lw=1.5, ls='-', label='Merged at $z>0$')
+	#plt.hist(cata[2], lmnsc, alpha=0.3, label=llab[op]+'_F (all in NSCs)')
+	#plt.hist(dmg[2][sel], lmnsc, histtype='step', lw=1.5, ls='-', label=llab[op]+'_F (merged at $z>0$)')
+	#plt.hist(cata1[2], lmnsc, histtype='step', lw=1.5, ls='--', color='k', label=llab[op]+'_P (all in NSCs)')
+	#plt.hist(dmg1[2][sel1], lmnsc, histtype='step', lw=1.5, ls='-.', color='r', label=llab[op]+'_P (merged at $z>0$)')
 	plt.xscale('log')
 	plt.yscale('log')
+	plt.legend()
 	plt.xlabel(r'$M_{\rm NSC}\ [\rm M_{\odot}]$')
 	plt.ylabel(r'$dN/d\log M_{\rm NSC}\ [\rm a.u.]$')
 	plt.xlim(x1, x2)
 	plt.ylim(y1, y2)
 	plt.tight_layout()
-	plt.savefig(repo+'bhbmg_mnsc_dis.pdf')
+	plt.savefig(repo+'bhbmnsc_dis.pdf')
 	plt.close()
+	q = [50, 90]
+	print('mnsc percentile: ', np.percentile(dmg[2][sel], q), np.percentile(dmg1[2][sel1], q))
+	print('mg percentile: ', np.percentile(dmg[3][sel], q), np.percentile(dmg1[3][sel1], q))
 
-	bhbnbody = np.array(bhbnbody)
-	la0 = bhbnbody[3]
-	la = dmg[7]
-	a1, a2 = 1, 1e6
-	ab = np.geomspace(a1, a2, 51)
-	y1, y2 = 0.5, 5e3
+	y1, y2 = 10*(ntree/100), 3e4*(ntree/100)
+	x1, x2 = 1e5, 1e11
+	lmnsc = np.geomspace(x1, x2, 33)
 	plt.figure()
-	plt.hist(la0, ab, alpha=0.5, label='Formation sites (N-body sim.)')
-	plt.hist(la, ab, histtype='step', lw=1.5, label='Mergers in NSCs', weights=np.ones(len(la))*len(la0)/len(la))
+	his, ed, pat = plt.hist(cata[3], lmnsc, alpha=0.3, label=llab[op]+'_F (all in NSCs)')#r'$f_{\rm NSC}=1$, $M_{\star}>10^{5}\ \rm M_{\odot}$')
+	plt.hist(dmg[3][sel],lmnsc, histtype='step', lw=1.5, ls='-', label=llab[op]+r'_F (merged at $z>0$)')#r'$f_{\rm NSC}=1$ (Merged at $z>0$)')
+	base = midbin(ed)
+	mod = his*focc_nsc(base)
+	his_, ed, pat = plt.hist(cata1[3], lmnsc, histtype='step', lw=1.5, ls='--', color='k', label=llab[op]+'_P (all in NSCs)')#r'$f_{\rm NSC}\equiv f_{\rm NSC}(M_{\star})$ based on obs.')
+	plt.hist(dmg1[3][sel1],lmnsc, histtype='step', lw=1.5, ls='-.', color='r', label=llab[op]+r'_P (merged at $z>0$)')
+	plt.legend()
 	plt.xscale('log')
 	plt.yscale('log')
+	plt.xlabel(r'$M_{\star}\ [\rm M_{\odot}]$')
+	plt.ylabel(r'$dN/d\log M_{\star}\ [\rm a.u.]$')
+	plt.xlim(x1, x2)
+	plt.ylim(y1, y2)
+	plt.tight_layout()
+	plt.savefig(repo+'bhbmg_dis.pdf')
+	plt.close()
+	fmw1 = len(cata[3])/np.sum(cata[3]>1e10)
+	fmw2 = len(cata1[3])/np.sum(cata1[3]>1e10)
+	print('All to MW-like: {:.2e} ({:.2e})'.format(fmw1, fmw2))
+	totxt(repo+'nsc_cap.txt', [base, his, his_])
+
+	nx = 40
+	x1, x2 = 0, 20
+	lz = np.linspace(x1, x2, nx+1)
+	plt.figure()
+	plt.hist(cata[1], lz, alpha=0.5, label='All in NSCs')
+	plt.hist(dmg[1][sel],lz, histtype='step', lw=1.5, label='Merged at $z>0$')
+	plt.xlabel(r'$z_{\rm if}$')
+	plt.ylabel(r'$dN/dz_{\rm if}\ [\rm a.u.]$')
+	plt.xlim(x1, x2)
 	plt.legend()
+	plt.tight_layout()
+	plt.savefig(repo+'bhbzif_dis.pdf')
+	plt.close()
+	
+	zcut = 4.5
+	print('Fraction of mergers with infalls at z>{}: {:.4e}'.format(zcut, np.sum(dmg[1][sel]>zcut)/np.sum(sel)))
+
+	zed = np.linspace(x1, x2, nx+1)
+	zbase = midbin(zed)
+	dt = np.array([(TZ(zed[i])-TZ(zed[i+1]))/YR for i in range(nx)])
+	his, ed = np.histogram(cata[1], zed, weights=cata[4])
+	his1, ed = np.histogram(dmg[1][sel], zed, weights=dmg[4][sel])
+	mrd = his/dt/ntree/Vcom #* 1e9
+	mrd1 = his1/dt/ntree/Vcom #* 1e9
+	y1, y2 = 1e-10, 1e-4
+	plt.figure()
+	plt.plot(zbase, mrd, label=r'All in NSCs')
+	plt.plot(zbase, mrd1, '--', label=r'Merged at $z>0$')
+	plt.plot(sfr3[0], sfr3[5]*fco*fbinary, 'k-.', label=r'Formation sites')
+	#plt.fill_between(sfr3[0], sfr3[5]+3*sfr3[6], sfr3[5]-3*sfr3[6], fc='b', alpha=0.2)
+	plt.legend(ncol=1)
+	plt.xlim(x1, x2)
+	plt.ylim(y1, y2)
+	plt.xlabel(r'$z$')
+	plt.ylabel(r'$\dot{\rho}_{\bullet}\ [\rm M_{\odot}\ yr^{-1}\ Mpc^{-3}]$')
+	plt.yscale('log')
+	plt.tight_layout()
+	plt.savefig(repo+'ifrd_z.pdf')
+	plt.close()
+
+	#acb = 3e3*Rsun/AU
+	acb = 1e4*Rsun/AU
+	#bhbnbody = np.array(bhbnbody)
+	la0 = cata[7] #bhbnbody[3]
+	la = dmg[7][sel]
+	lans1 = dmg[7][sel][(lmb<=3)*(lma>3)]
+	lans2 = dmg[7][sel][(lmb<=3)*(lma<=3)]
+	a1, a2 = 1, 1e6
+	ab = np.geomspace(a1, a2, 61)
+	y1, y2 = 1, 5e4*(ntree/100)
+	plt.figure()
+	plt.hist(la0, ab, alpha=0.3, label='All in NSCs')# (N-body sim.)')
+	plt.hist(la, ab, histtype='step', lw=1.5, label='Merged at $z>0$')#, weights=np.ones(len(la))*len(la0)/len(la))
+	#plt.hist(lans1, ab, histtype='step', lw=1.5, ls='--', color='k', label='NS-BH mergers')
+	#plt.hist(lans2, ab, histtype='step', lw=1.5, ls='-.', color='r', label='NS-NS mergers')
+	plt.plot([acb]*2,[y1,y2],'k-',lw=0.5)
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.legend(ncol=2)
 	plt.xlim(a1, a2)
 	plt.ylim(y1, y2)
 	plt.xlabel(r'$a_{0}\ [\rm au]$')
@@ -1276,8 +1573,143 @@ if __name__=='__main__':
 	plt.tight_layout()
 	plt.savefig(repo+'a0_dis.pdf')
 	plt.close()
+	print('Close binary fraction: {:.2e} ({:.2e})'.format(np.sum(la<acb)/len(la), np.sum(la0<acb)/len(la0)) )
 
-	exit()
+	#exit()
+	
+	"""
+	import seaborn as sns
+	import pandas
+	#sns.set_theme(style="darkgrid")
+	xlab, ylab = r'$m_{\rm chirp}\ [\rm M_{\odot}]$', r'$q$'
+	data = pandas.DataFrame(data=np.array([lmc,lmb/lma]).T,columns=[xlab,ylab])
+	g = sns.jointplot(data=data,x=xlab,y=ylab,kind='hist',xlim=[0,80], ylim=[0,1],bins=41,marginal_kws=dict(alpha=0.5,bins=41),color='k',cmap=plt.cm.Greys)
+	#g = sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',xlim=[0,100], ylim=[0,100],gridsize=(41,41),bins='log',marginal_kws=dict(alpha=0.7),color='k',cmap=plt.cm.Greys)
+	selgw = [7, 28, 29, 32, 35, 36, 46]
+	g.ax_joint.errorbar(ligo[7],1.0/ligo[10],xerr=[ligo[9],ligo[8]],yerr=[ligo[11]/ligo[10]**2,ligo[12]/ligo[10]**2],fmt='.',
+	alpha=0.3,color='r', label='3-OGC')
+	g.ax_joint.errorbar(ligo[7][selgw],1.0/ligo[10][selgw],xerr=[ligo[9][selgw],ligo[8][selgw]],yerr=[ligo[11][selgw]/ligo[10][selgw]**2,ligo[12][selgw]/ligo[10][selgw]**2],fmt='^',color='r')
+	g.ax_joint.legend()
+	plt.savefig('mchirp_q.pdf')
+	plt.close()
+	
+	xlab, ylab = r'$m_{1}\ [\rm M_{\odot}]$', r'$q$'
+	data = pandas.DataFrame(data=np.array([lma,lmb/lma]).T,columns=[xlab,ylab])
+	g = sns.jointplot(data=data,x=xlab,y=ylab,kind='hist',xlim=[0,100], ylim=[0,1],bins=41,marginal_kws=dict(alpha=0.5,bins=41),color='k',cmap=plt.cm.Greys)
+	#g = sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',xlim=[0,100], ylim=[0,100],gridsize=(41,41),bins='log',marginal_kws=dict(alpha=0.7),color='k',cmap=plt.cm.Greys)
+	selgw = [7, 28, 29, 32, 35, 36, 46]
+	g.ax_joint.errorbar(ligo[1],1.0/ligo[10],xerr=[ligo[3],ligo[2]],yerr=[ligo[11]/ligo[10]**2,ligo[12]/ligo[10]**2],fmt='.',
+	alpha=0.3,color='r', label='3-OGC')
+	g.ax_joint.errorbar(ligo[1][selgw],1.0/ligo[10][selgw],xerr=[ligo[3][selgw],ligo[2][selgw]],yerr=[ligo[11][selgw]/ligo[10][selgw]**2,ligo[12][selgw]/ligo[10][selgw]**2],fmt='^',color='r')
+	g.ax_joint.legend()
+	plt.savefig('m1_q.pdf')
+	plt.close()
+	
+	#xlab, ylab = r'$m_{2}\ [\rm M_{\odot}]$', r'$q$'
+	#data = pandas.DataFrame(data=np.array([lmb,lmb/lma]).T,columns=[xlab,ylab])
+	#g = sns.jointplot(data=data,x=xlab,y=ylab,kind='hist',xlim=[0,100], ylim=[0,1],bins=41,marginal_kws=dict(alpha=0.5,bins=41),color='k',cmap=plt.cm.Greys)
+	#selgw = [7, 28, 29, 32, 35, 36, 46]
+	#g.ax_joint.errorbar(ligo[4],1.0/ligo[10],xerr=[ligo[6],ligo[5]],yerr=[ligo[12],ligo[11]],fmt='.',
+	#alpha=0.3,color='r', label='3-OGC')
+	#g.ax_joint.errorbar(ligo[4][selgw],1.0/ligo[10][selgw],xerr=[ligo[6][selgw],ligo[5][selgw]],yerr=[ligo[12][selgw],ligo[11][selgw]],fmt='^',color='r')
+	#g.ax_joint.legend()
+	#plt.savefig('m2_q.pdf')
+	#plt.close()
+
+	xlab, ylab = r'$m_{1}\ [\rm M_{\odot}]$', r'$m_{2}\ [\rm M_{\odot}]$'
+	data = pandas.DataFrame(data=np.array([lma,lmb]).T,columns=[xlab,ylab])
+	g = sns.jointplot(data=data,x=xlab,y=ylab,kind='hist',xlim=[0,100], ylim=[0,100],bins=41,marginal_kws=dict(alpha=0.5,bins=41),color='k',cmap=plt.cm.Greys)
+	#g = sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',xlim=[0,100], ylim=[0,100],gridsize=(41,41),bins='log',marginal_kws=dict(alpha=0.7),color='k',cmap=plt.cm.Greys)
+	selgw = [7, 28, 29, 32, 35, 36, 46]
+	g.ax_joint.errorbar(ligo[1],ligo[4],xerr=[ligo[3],ligo[2]],yerr=[ligo[6],ligo[5]],fmt='.',
+	alpha=0.3,color='r', label='3-OGC')
+	g.ax_joint.errorbar(ligo[1][selgw],ligo[4][selgw],xerr=[ligo[3][selgw],ligo[2][selgw]],yerr=[ligo[6][selgw],ligo[5][selgw]],fmt='^',color='r')
+	g.ax_joint.legend()
+	plt.savefig('m2_m1.pdf')
+	plt.close()
+
+	selm = cata[3]<cata[2]
+	cata[2][selm] = cata[3][selm]*0.99
+	xlab, ylab = r'$\log(M_{\star}\ [\rm M_{\odot}])$', r'$\log(M_{\rm NSC}\ [\rm M_{\odot}])$'
+	data = pandas.DataFrame(data=np.log10([cata[3],cata[2]]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',bins='log',gridsize=(16,16),
+	marginal_kws=dict(bins=16, fill=True,alpha=0.7),marginal_ticks=True,
+	xlim=[5,10.5], ylim=[5,7.9],color='k',cmap=plt.cm.Greys)
+	plt.savefig('mnsc_mg0.pdf')
+	plt.close()
+
+	selm = dmg[3]<dmg[2]
+	dmg[2][selm] = dmg[3][selm]*0.99
+	xlab, ylab = r'$\log(M_{\star}\ [\rm M_{\odot}])$', r'$\log(M_{\rm NSC}\ [\rm M_{\odot}])$'
+	data = pandas.DataFrame(data=np.log10([dmg[3][sel],dmg[2][sel]]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',bins='log',gridsize=(16,16),
+	marginal_kws=dict(bins=16, fill=True,alpha=0.7),marginal_ticks=True,
+	xlim=[5,10.5], ylim=[5,7.9],color='k',cmap=plt.cm.Greys)
+	plt.savefig('mnsc_mg.pdf')
+	plt.close()
+	#print(np.sum(dmg[3]<dmg[2])/len(dmg[2]))
+	
+	selm = dmg1[3]<dmg1[2]
+	dmg1[2][selm] = dmg1[3][selm]*0.99
+	xlab, ylab = r'$\log(M_{\star}\ [\rm M_{\odot}])$', r'$\log(M_{\rm NSC}\ [\rm M_{\odot}])$'
+	data = pandas.DataFrame(data=np.log10([dmg1[3][sel1],dmg1[2][sel1]]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',bins='log',gridsize=(16,16),
+	marginal_kws=dict(bins=16, fill=True,alpha=0.7),marginal_ticks=True,
+	xlim=[5,10.5], ylim=[5,7.9],color='k',cmap=plt.cm.Greys)
+	plt.savefig('mnsc_mg1.pdf')
+	plt.close()
+	
+	xlab, ylab = r'$\log(M_{\rm NSC}\ [\rm M_{\odot}])$', r'$z_{\rm if}$'
+	#data = pandas.DataFrame(data=np.array([np.log10(cata[2]),cata[1]]).T,columns=[xlab,ylab])
+	data = pandas.DataFrame(data=np.array([np.log10(dmg[2]),dmg[1]]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',bins='log',gridsize=(16,16),
+	marginal_ticks=True,xlim=[5,7.9], ylim=[0,15],color='k',
+	cmap=plt.cm.Greys,marginal_kws=dict(bins=16, fill=True,alpha=0.7))
+	plt.savefig('mnscmg_zif.pdf')
+	plt.close()
+	data = pandas.DataFrame(data=np.array([np.log10(cata[2]),cata[1]]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',bins='log',gridsize=(16,16),
+	marginal_kws=dict(bins=16, fill=True,alpha=0.7),marginal_ticks=True,
+	xlim=[5,7.9], ylim=[0,15],color='k',cmap=plt.cm.Greys)
+	plt.savefig('mnsc_zif.pdf')
+	plt.close()
+	
+	t0 = np.log10(TZ(0)/1e6/YR)
+	t1, t2 = np.log10([TZ(z)/YR/1e6 for z in dmg[1][sel]]), np.log10([TZ(z)/YR/1e6 for z in dmg[-4][sel]])
+	xlab, ylab = r'$\log(t_{\rm if}\ [\rm Myr])$', r'$\log(t_{\rm mg}\ [\rm Myr])$'
+	data = pandas.DataFrame(data=np.array([t1, t2]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',bins='log',gridsize=(33,33),
+	marginal_kws=dict(bins=33, fill=True,alpha=0.7),
+	xlim=[2.5,t0], ylim=[2.5,t0],color='k',cmap=plt.cm.Greys)
+	#g.ax_joint.plot([0,16],[0,16],'r-')
+	plt.savefig('tmg_tif.pdf')
+	plt.close()
+	
+	xlab, ylab = r'$z_{\rm if}$', r'$z_{\rm mg}$'
+	data = pandas.DataFrame(data=np.array([dmg[1][sel],dmg[-4][sel]]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hex',bins='log',gridsize=(33,33),
+	marginal_kws=dict(bins=33, fill=True,alpha=0.7),
+	xlim=[0,16], ylim=[0,16],color='k',cmap=plt.cm.Greys)
+	#g.ax_joint.plot([0,16],[0,16],'r-')
+	plt.savefig('zmg_zif.pdf')
+	plt.close()
+
+	xlab, ylab = r'$\log(a_{0}\ [\rm au])$', r'$e_{0}$'
+	data = pandas.DataFrame(data=np.array([np.log10(la),le]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hist',xlim=[0,5], ylim=[0,1],bins=51,
+	marginal_kws=dict(bins=51,alpha=0.5),color='k',cmap=plt.cm.Greys)
+	plt.savefig('loga_e.pdf')
+	plt.close()
+	
+	xlab, ylab = r'$q$', r'$e_{0}$'
+	data = pandas.DataFrame(data=np.array([lq,le]).T,columns=[xlab,ylab])
+	sns.jointplot(data=data,x=xlab,y=ylab,kind='hist',xlim=[0,1], ylim=[0,1],bins=51,
+	marginal_kws=dict(bins=51,alpha=0.5),color='k',cmap=plt.cm.Greys)
+	plt.savefig('q_e.pdf')
+	plt.close()
+	"""
+	
+	#exit()
 	
 	test = 1
 	lab = 'test'
@@ -1292,24 +1724,32 @@ if __name__=='__main__':
 	fac = 1#sigmafac(g)
 	if test>0:
 		d = abhb_t(t2, nt, m1, m2, a0, e0, r0, M, R, e, g, H=H, cd=cd, kap=kap, lnL=lnL, wt=1, dehnen=1, fac=fac)
+		#d0 = abhb_t(t2, 0, m1, m2, a0, e0, r0, M, R, e, g, H=H, cd=cd, kap=kap, lnL=lnL, wt=0, dehnen=1, fac=fac)
+		#print(d['out'][1], d0['out'][1])
 		plot_bhb(d, lab, aflag=0, y1=0, log=1, gyr=1, sep=1)
 
 	t2, nt = 10e9, 100000
-	cd = 1000
 	H = 20
 	kap = 0.1
-	m1, m2 = 85, 65, 
-	a0, e0 = 200, 0
-	r0, M, R, e, g = 3, 2.5e7, 4.4, 0, 1.8
+	m1, m2 = 70, 50
+	a0, e0 = 300, 0.9
+	r0, M, R, e, g = 3, 1e6, 3, 0, 1.5
 	fac = 1#sigmafac(g)
 	
 	if test>0:
-		g = 1.8
-		cd = 50
+		#g = 1.8
+		cd = 100
 		d = abhb_t(t2, nt, m1, m2, a0, e0, r0, M, R, e, g, H=H, cd=cd, kap=kap, lnL=lnL, wt=1, fac=fac)
-		plot_bhb(d, 'mw_core', aflag=0, y1=0, log=1, sep=1)
+		#d0 = abhb_t(t2, 0, m1, m2, a0, e0, r0, M, R, e, g, H=H, cd=cd, kap=kap, lnL=lnL, wt=0, dehnen=1, fac=fac)
+		#print(d['out'][1], d0['out'][1])
+		plot_bhb(d, 'ecc', aflag=0, y1=0, log=1, sep=1)
 		exit() #THREE-DIMENSIONAL STELLAR KINEMATICS AT THE GALACTIC CENTER: MEASURING THE NUCLEAR STAR CLUSTER SPATIAL DENSITY PROFILE, BLACK HOLE MASS, AND DISTANCE
 	
+	t2, nt = 10e9, 100000
+	m1, m2 = 85, 66
+	cd = 1000
+	a0, e0 = 200, 0
+	r0, M, R, e, g = 3, 2.5e7, 4.4, 0, 1.8
 	rep = 'kap01/'
 	if not os.path.exists(rep):
 		os.makedirs(rep)
@@ -1322,7 +1762,7 @@ if __name__=='__main__':
 			print('ebhb0={}, eo0={}'.format(e0, e))
 			lab = str(i)+str(j)
 			d = abhb_t(t2, nt, m1, m2, a0, e0, r0, M, R, e, g, H=H, cd=cd, kap=kap, lnL=lnL, wt=1, fac=fac)
-			if i==0 and j==0:
+			if i==0 and j==0 or j==2:
 				plot_bhb(d, lab, rep, 1, y1=0, log=1, sep=1)
 				plot_bhb(d, lab, rep+'linear/', y1=0, log=1, sep=1)
 			plot_bhb(d, lab, rep, 1)

@@ -4,6 +4,7 @@ from scipy.interpolate import interp1d
 from scipy.integrate import quad, solve_ivp
 from scipy.optimize import root
 from scipy.optimize import curve_fit
+from scipy.misc import derivative
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
@@ -155,18 +156,21 @@ plt.loglog(*ps2, '-.', label=r'FDM: $m_{\mathrm{a}}='
 			+'{:.1f}'.format(ma2*1e22)+r'\times 10^{-22}\ \mathrm{eV}/c^{2}$')
 plt.loglog(kh, pk[0], color='gray', lw=4.5, alpha=0.5, label='CDM (linear), CAMB')
 plt.loglog(kh_nonlin, pk_nonlin[0], ':', label='CDM (non-linear), CAMB')
-plt.xlabel(r'$k\ [h\ \mathrm{Mpc^{-1}}]$', size=14)
-plt.ylabel(r'$P(k)\ [h^{-3}\ \mathrm{Mpc^{3}}]$', size=14)
+plt.xlabel(r'$k\ [h\ \mathrm{Mpc^{-1}}]$', size=18)
+plt.ylabel(r'$P(k)\ [h^{-3}\ \mathrm{Mpc^{3}}]$', size=18)
+plt.xticks(fontsize= 18)
+plt.yticks(fontsize= 18)
 plt.xlim(klm)
 plt.ylim(Plm)
 #plt.title('z={}'.format(zps))
-plt.legend(fontsize=14)
+plt.legend(fontsize=16)
 plt.tight_layout()
 plt.savefig('powspec.pdf')
 plt.close()
 
+delta_plus0 = delta_plus(0, Om, 1-Om)
 def Dgrow_(z, Om = Om, Ol = 1-Om):
-	return delta_plus(z, Om, Ol)/delta_plus(0, Om, Ol)
+	return delta_plus(z, Om, Ol)/delta_plus0
 
 def Dgrow(z, Om = Om, Ol = 1-Om):
 	Omz = Om*(1+z)**3/(Om*(1+z)**3 + Ol)
@@ -185,8 +189,37 @@ def deltac_z(z, Om = Om, Ol = 1-Om, mode=1):
 	Dz = Dgrow(z, Om, Ol)
 	return deltac/Dz
 
-#lz = np.linspace(0, 20, 1000)
-#plt.plot(1/(1+lz), [deltac_z(z) for z in lz])
+lz = np.linspace(0, 50, 200)
+d = Om*(1+lz)**3/(1-Om+Om*(1+lz)**3)-1
+do = 18*np.pi**2 + 82*d-39*d**2
+plt.figure()
+plt.plot(1/(1+lz), [deltac_z(z)*Dgrow(z, Om, 1-Om) for z in lz], label=r'$\delta_{\rm c}$')
+plt.plot(1/(1+lz), do/100, '--', label=r'$\Delta_{\rm vir}/100$')
+plt.xlabel(r'$a$', size=18)
+plt.ylabel(r'Overdensity', size=18)
+plt.legend(fontsize=18)
+plt.xticks(fontsize= 18)
+plt.yticks(fontsize= 18)
+plt.xlim(0, 1)
+plt.tight_layout()
+plt.savefig('deltac_a.pdf')
+plt.close()
+
+plt.figure()
+plt.plot(1/(1+lz), [Dgrow_(z, Om, 1-Om) for z in lz], label='Numerical solution')
+plt.plot(1/(1+lz), Dgrow(lz, Om, 1-Om), '--', label='Fit')
+plt.plot(1/(1+lz), 1/(1+lz), '-.', label=r'$D(a)\propto a$')
+plt.xlabel(r'$a$', size=18)
+plt.ylabel(r'$D(a)/D(a=0)$', size=18)
+plt.legend(fontsize=18, loc=4)
+plt.xticks(fontsize= 18)
+plt.yticks(fontsize= 18)
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+plt.tight_layout()
+plt.savefig('Dgrow_a.pdf')
+plt.close()
+
 #plt.show()
 
 def fPS(nu0, mode = 0, A = 0.322, q = 0.3, fac = 0.84, norm=1):
@@ -229,12 +262,11 @@ def halomassfunc(lm, z, ps, wf=wf1, gf=gf1, Om = Om, Ol = 1-Om, dx = 5e-2, corr 
 	
 lm0 = np.geomspace(1e3, 2e16, 10000)
 
-exit()
-	
-mode = 1
+mode = 1 # 0: standard PS + LW, 1: PS with elliptical dynamics + LW, 2: PS with... no LW
+
 m1, m2 = 1e4*h, 1e16*h
 lm = np.geomspace(m1, m2, 100)
-lz = [0, 6, 10, 20, 50]
+lz = [0, 5, 10, 20, 30]
 lhmf = []
 for z in lz:
 	hmf = halomassfunc(lm0, z, ps0, wf1, gf1, mode=mode)
@@ -242,12 +274,14 @@ for z in lz:
 	
 plt.figure()
 for z, f in zip(lz, lhmf):
-	plt.loglog(lm/h, lm*f*h**3, label=r'$z={:.0f}$'.format(z))
-plt.legend()
+	plt.loglog(lm/h, lm*f*h**3*np.log(10), label=r'$z={:.0f}$'.format(z))
+plt.legend(fontsize=18)
 plt.xlim(m1/h, m2/h)
 plt.ylim(1e-9, 1e6)
-plt.xlabel(r'$M\ [\mathrm{M_{\odot}}]$', size=14)
-plt.ylabel(r'$Mdn/dM\ [\mathrm{Mpc^{-3}}]$', size=14)
+plt.xlabel(r'$M\ [\mathrm{M_{\odot}}]$', size=18)
+plt.ylabel(r'$dn/d\log M\ [\mathrm{Mpc^{-3}}]$', size=18)
+plt.xticks(fontsize= 18)
+plt.yticks(fontsize= 18)
 plt.tight_layout()
 plt.savefig('mhmf.pdf')
 plt.close()
@@ -255,11 +289,187 @@ plt.close()
 plt.figure()
 for z, f in zip(lz, lhmf):
 	plt.loglog(lm/h, lm**2*f/(rho0/UM*UL**3)*h**2, label=r'$z={:.0f}$'.format(z))
-plt.legend()
+plt.legend(fontsize=18)
 plt.xlim(m1/h, m2/h)
 plt.ylim(1e-16, 0.1)
-plt.xlabel(r'$M\ [\mathrm{M_{\odot}}]$', size=14)
-plt.ylabel(r'$M^{2}dn/dM/\rho_{\rm m}$', size=14)
+plt.xlabel(r'$M\ [\mathrm{M_{\odot}}]$', size=18)
+plt.ylabel(r'$M^{2}dn/dM/\rho_{\rm m}$', size=18)
+plt.xticks(fontsize= 18)
+plt.yticks(fontsize= 18)
 plt.tight_layout()
 plt.savefig('m2hmf.pdf')
 plt.close()
+
+def totxt(s, l, ls = 0, t = 0, k = 0):
+	j = 0
+	with open(s, 'w') as f:
+		if t!=0:
+			for r in range(len(ls)):
+				f.write(ls[r])
+				f.write(' ')
+			f.write('\n')
+		for i in range(len(l[0])):
+			if j<k:
+				print (l[0][i])
+			else:
+				for s in range(len(l)):
+					f.write(str(l[s][i]))
+					f.write(' ')
+				f.write('\n')
+			j = j+1
+
+def retxt(s, n, k = 0, t = 0): # s: file name, n: num of columns, 
+							   # k: num of head lines to skip, t: ifornot reverse
+	out = []
+	for i in range(n):
+		out.append([])
+	j = 0
+	with open(s, 'r') as f:
+		for line in f:
+			lst = line.split()
+			if j<k:
+				a=1#print (lst[0])
+			else:
+				for i in range(n):
+					out[i].append(float(lst[i]))
+			j = j+1
+	if t!=0:
+		for i in range(n):
+			out[i].reverse()
+	out[i] = np.array(out[i])
+	return out
+
+def sfrtf(z, a, b, c, d):
+	#t = 1/(z+1)
+	#return a*(t**b*np.exp(-t/c)+d*np.exp(d*(t-1)/c)) 
+	return a*(1+z)**b/(1+((1+z)/c)**d)
+
+lsfrd0 = retxt('pop3sfrd_z_0.txt',2)
+lsfrd1 = retxt('pop3sfrd_z_1.txt',2)
+lsfrd2 = retxt('pop3sfrd_z_2.txt',2)
+
+lz = np.linspace(5, 30, 251)
+para = [765.7, -5.92, 12.83, -8.55]
+lsfrd = sfrtf(lz, *para)
+plt.figure()
+#plt.plot(*lsfrd0, label='Standard PS')
+plt.plot(*lsfrd1, '-', label='PS + LW feedback')
+plt.plot(*lsfrd2, '--', label='PS no LW feedback')
+plt.plot(lz, lsfrd, '-.', label='Simulation (LB20)')
+plt.legend(loc=3, fontsize=18)
+plt.xlabel(r'$z$', size=18)
+plt.ylabel(r'$\dot{\rho}_{\star,\rm PopIII}\ [\rm M_{\odot}\ yr^{-1}\ Mpc^{-3}]$', size=18)
+plt.xticks(fontsize= 18)
+plt.yticks(fontsize= 18)
+plt.yscale('log')
+plt.ylim(1e-7, 1e-3)
+plt.xlim(5, 30)
+plt.tight_layout()
+plt.savefig('pop3sfrd_z.pdf')
+plt.close()
+
+#exit()
+
+#"""
+lwbg1 = np.array(retxt('z_FLW_IMFmin1.0E+00IMFmax1.7E+02eta1.0E-03slope0.0E+00.dat',2,2)) # read F21 data from merger trees
+lwbg2 = np.array(retxt('FLW_z.txt',2)) # read F21 data from simulations
+lz, lf = lwbg2
+ind0, ind = 17, 20
+f210 = lf[ind0]
+z0 = lz[ind0]
+alp = np.log10(lf[ind]/lf[ind0])/(lz[ind]-lz[ind0])
+f21ex = lambda z: f210*10**(alp*(z-z0))
+sel = lwbg2[1]<=0
+lwbg2[1][sel] = f21ex(lwbg2[0][sel])
+
+F21_z1 = interp1d(*lwbg1)
+F21_z2 = interp1d(*lwbg2)
+
+plt.figure()
+plt.plot(lz[lz<25], lf[lz<25], 'm-', label='Simulation')
+plt.plot(lz[lz>21], f21ex(lz[lz>21]), 'm--')
+plt.plot(*lwbg1, 'b:', label='Merger trees')
+plt.xlabel(r'$z$', size=18)
+plt.ylabel(r'$F_{\rm 21}$', size=18)
+plt.xticks(fontsize= 18)
+plt.yticks(fontsize= 18)
+plt.legend(fontsize=18)
+plt.yscale('log')
+plt.xlim(5, 30)
+plt.ylim(1e-5, 1e2)
+plt.tight_layout()
+plt.savefig('F21_z.pdf')
+plt.close()
+
+
+def flw(m,z,mass=0,z1=4,z2=31):
+	if z>z1 and z<z2:
+		#f21 = max(F21_z2(z),F21_z1(z)) # You may choose one LW background or combine the two
+									   # Here I use the minimum to be conservative
+		f21 = F21_z2(z)
+	else:
+		f21 = 0
+	if f21<=0:
+		return m/m
+	mcrit = 1.25e5 + 8.7e5*f21**0.47
+	if mass>0: # count the num of pop3 hosts
+		y = 0.06*np.log(m/mcrit) # This formula is negative for m<mcrit, which
+								 # is unphysical, should set it to 0 in that case
+	else: # apply the reduction of pop3 stellar mass by LW feedback
+		y = m/m
+	y[m<mcrit] = 0
+	if mode<2:
+		return y
+	else:
+		return m/m   # turn off LW feedback (mode=2)
+
+lz = np.linspace(5, 30, 251)
+lmh = [1e6, 1e7, 1e8]
+lls = ['-', '--', '-.']
+plt.figure()
+dy = np.array([flw(np.array(lmh), z, 1) for z in lz]).T
+for i in range(len(lmh)):
+	plt.plot(lz, dy[i], ls=lls[i], label=r'$M={:.1e}\ \rm {}$'.format(lmh[i], r'M_{\odot}'))
+plt.xlabel(r'$z$', size=18)
+plt.ylabel(r'$f_{\rm LW}$', size=18)
+plt.xticks(fontsize= 18)
+plt.yticks(fontsize= 18)
+plt.legend(fontsize=18)
+plt.ylim(0,0.5)
+plt.xlim(5, 30)
+plt.tight_layout()
+plt.savefig('fLW_M_z.pdf')
+plt.close()
+	
+exit()
+
+print('mode: ',mode)
+lmass = np.geomspace(1e6*h, 1e8*h, 100)
+Vcom = 30.3*h**3 # in unit of h^-3 Mpc^3 to be consistent with the hmf
+nz = 25
+lz = np.linspace(5, 30, nz+1)
+msmax = 1000 # Maximum pop3 stellar mass in a halo (implied by simulations)
+eta0 = 0.001
+nhalo = 0
+mstar = 0
+lsfrd = np.zeros(nz)
+for i in range(nz):
+	hmf0 = halomassfunc(lm0,lz[i],ps0,wf1,gf1,mode=mode)   # n(m,z_i)
+	hmf1 = halomassfunc(lm0,lz[i+1],ps0,wf1,gf1,mode=mode) # n(m,z_{i+1})
+	dnh = np.array([hmf0(m) for m in lmass]) - np.array([hmf1(m) for m in lmass]) # dn(m, z_i)
+	dnh[dnh<0] = 0
+	dnhalo = np.trapz(dnh*flw(lmass/h,lz[i]), lmass)*Vcom # num of pop3 hosts formed in this z bin
+	lms = flw(lmass/h,lz[i],1)*eta0*Ob/Om*lmass/h # stellar masses of pop3 hosts
+	lms[lms>msmax] = msmax # Apply the maximum stellar mass
+	dmstar = np.trapz(dnh*lms, lmass)*Vcom # total stellar mass of pop3 stars formed in this z bin
+	nhalo += dnhalo
+	mstar += dmstar
+	print('z~{}-{}: delta nhalo: {}, delta mstar: {:.2e} Msun'.format(lz[i], lz[i+1], dnhalo, dmstar))
+	lsfrd[i] = dmstar*h**3/Vcom*YR/(age_a(1/(1+lz[i]))-age_a(1/(1+lz[i+1])))
+print('Total number of pop3 hosts: {:.0f}'.format(nhalo))
+print('Total mass of pop3 stars: {:.2e} Msun'.format(mstar))
+
+totxt('pop3sfrd_z_'+str(mode)+'.txt',[lz[:-1], lsfrd])
+
+exit()
+#"""
