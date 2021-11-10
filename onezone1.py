@@ -15,7 +15,7 @@ G = 6.674e-8
 kB = 1.3806e-16
 H00 = 100*10**5/pc/10**6
 H0 = H00*hubble 
-Zsun = 0.02
+Zsun = 0.0134
 
 REDSHIFT = 0.0
 NMAX = 1e15
@@ -43,7 +43,7 @@ def Hubble(z):
 def tff(rho):
 	return (3.0*np.pi/32.0/G/rho)**0.5
 
-def main1(Tini = 2.0e2, nini = n0(), Xh2=0.0, Ion=1.0e-4, Li = 4.6e-10, D = 4e-5, z = REDSHIFT, mode = 1, J_21 = 0.0, num = 1e4, dtini =1.e-4, epsT = 1.e-4, epsH = 1.e-2, fac1 = 10.0, fac2 = 10.0, gamma = 5.0/3.0, X = 0.76, Z = 3e-4, boost=1.0, H2_flag = 1):
+def main1(Tini = 2.0e2, nini = n0(), Xh2=0.0, Ion=1.0e-4, Li = 4.6e-10, D = 4e-5, z = REDSHIFT, mode = 1, J_21 = 0.0, num = 2e4, dtini =1.e-4, epsT = 1.e-4, epsH = 1.e-2, fac1 = 10.0, fac2 = 10.0, gamma = 5.0/3.0, X = 0.76, Z = 3e-4, boost=1.0, H2_flag = 1):
 	start = time.time()
 	mH = PROTON*4.0/(1.0+3.0*X)
 	num = int(num)

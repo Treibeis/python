@@ -152,7 +152,10 @@ def lam_2level(gamma_H_21, gamma_H_12, gamma_e_21, gamma_e_12, A21, delta_E21, x
 
 	return top/bottom * (ntot * A21 * delta_E21);
 
-def JJ_metal_cooling(temp, xn, xe, Z):
+#ZC, ZO, ZSi, ZFe = 2.38e-3, 5.79e-3, 6.71e-4, 1.31e-3 # Zsun = 0.0134
+ZC, ZO, ZSi, ZFe = 3.26e-3, 8.65e-3, 1.08e-3, 1.73e-3 # Zsun = 0.02
+
+def JJ_metal_cooling(temp, xn, xe, Z, ZC=ZC, ZO=ZO, ZSi=ZSi, ZFe=ZFe):
 	"""
 	=======================================================================
 	Metal fine structure cooling from CII, OI, SiII and FeII
@@ -163,10 +166,10 @@ def JJ_metal_cooling(temp, xn, xe, Z):
 	"""
 	nh = xn * 0.93;
 	#Asplund:09 solar abundances
-	x_CII = 3.26e-3 * Z;    
-	x_OI = 8.65e-3 * Z;    
-	x_SiII = 1.08e-3 * Z;    
-	x_FeII = 1.73e-3 * Z;   
+	x_CII = ZC * Z;    
+	x_OI = ZO * Z;    
+	x_SiII = ZSi * Z;    
+	x_FeII = ZFe * Z;   
   
 	#total number density for each species
 	n_CII = x_CII * nh/12;
