@@ -206,10 +206,22 @@ def agw3b(M1, M2, sig, rho, e, H=17.5):
 	agw = (B/A)**(1/5) 
 	return agw
 	
-def fGW(M, a, e):
-	out = (GRA*M*Msun)**0.5/np.pi
-	out *= (1+e)**1.1954/(a*(1-e**2))**1.5
-	return out
+def fGW_wen03(M, a, e, fint=0):
+	forb = 0.5*(GRA*M*Msun/a**3)**0.5/np.pi
+	npeak = 2*(1+e)**1.1954/(1-e**2)**1.5
+	if fint>0:
+		npeak = np.round(npeak+0.001)
+	return forb*npeak
+
+ck0 = [-1.01678, 5.57372, -4.9271, 1.68506]
+def fGW(M, a, e, fint=0, ck=ck0):
+	forb = 0.5*(GRA*M*Msun/a**3)**0.5/np.pi
+	npeak = 2*(1+ck[0]*e+ck[1]*e**2+ck[2]*e**3+ck[3]*e**4)*(1-e**2)**-1.5
+	#print(npeak)
+	if fint>0:
+		npeak = 2*(npeak<=2)+np.round(npeak)*(npeak>2)
+		#print(npeak)
+	return forb*npeak
 
 from scipy.integrate import quad, solve_ivp
 from miniquasar import rho_inf, sigma_inf, time_isobhb
@@ -334,7 +346,7 @@ if __name__=="__main__":
 	s2 = PMwf(lf, M1/(1+z), M2/(1+z), DL, z)[0]
 	plt.loglog(s1/s2)
 	plt.ylim(1e-1,10.0)
-	plt.show()
+	#plt.show()
 	plt.close()
 	
 	lm1 = [125, 5e2, 1e4, 1e4, 1e4]
@@ -396,3 +408,27 @@ if __name__=="__main__":
 	plt.close()
 	#"""
 	
+	M = 100
+	a = 1e-5*AU
+	x1, x2 = 1e-8, 1
+	le = np.linspace(0, 1-x1, 1000) #1-np.geomspace(x1, x2, 100)
+	f0 = fGW_wen03(M, a, le)
+	f1 = fGW(M, a, le)
+	f0_ = fGW_wen03(M, a, le, 1)
+	f1_ = fGW(M, a, le, 1)
+	y1, y2 = 10, 1e4
+	plt.figure()
+	plt.plot(le, f0, '--', label='Wen+2003')
+	plt.plot(le, f1, label='Hamers+2021')
+	plt.plot(le, f0_, ':', label='Wen+2003 (int)')
+	plt.plot(le, f1_, '-.', label='Hamers+2021 (int)')
+	plt.title(r'$M=100\ \rm M_{\odot}$, $a=10^{-5}\ \rm AU$')
+	plt.xlabel(r'$e$')
+	plt.ylabel(r'$f_{\rm GW,peak}\ [\rm Hz]$')
+	plt.yscale('log')
+	plt.xlim(0, 1)
+	plt.ylim(y1, y2)
+	plt.legend()
+	plt.tight_layout()
+	plt.savefig('fGW_e.pdf')
+	plt.close()

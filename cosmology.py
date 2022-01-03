@@ -64,21 +64,21 @@ def BB_spectrum(nu0, T):
   return 2*PLANCK/SPEEDOFLIGHT**2 * nu**3/(np.exp(PLANCK*nu/(BOL*T))-1) * (nu<=numax)
 
 # Cosmology
-def H(a, Om = 0.315, h = 0.6774, OR = 9.54e-5):
+def H(a, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 	H0 = h*100*UV/UL/1e3
 	H = H0*(Om/a**3+(1-Om-OR)+OR/a**4)**0.5
 	return H
 
-def DZ(z, Om = 0.315, h = 0.6774, OR = 9.54e-5):
+def DZ(z, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 	def integrand(a):
 		return SPEEDOFLIGHT/(a**2)/H(a, Om, h, OR)
 	I = quad(integrand, 1/(1+z), 1, epsrel = 1e-8)
 	return I[0]
 
-def dt_da(a, Om = 0.315, h = 0.6774, OR = 9.54e-5):
+def dt_da(a, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 	return 1/a/H(a, Om, h, OR)
 
-def TZ0(z, Om = 0.315, h = 0.6774, OR = 9.54e-5):
+def TZ0(z, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 	I = quad(dt_da, 0, 1/(1+z), args = (Om, h, OR), epsrel = 1e-8)
 	return I[0]
 
@@ -93,7 +93,7 @@ TZ = lambda z: 10**TZint(np.log10(1/(1+z)))*1e9*YR
 ZT = interp1d(lt0, lz0)
 ZD = interp1d(ld0, lz0)
 
-def rhom(a, Om = 0.315, h = 0.6774):
+def rhom(a, Om = 0.3089, h = 0.6774):
 	H0 = h*100*UV/UL/1e3
 	rho0 = Om*H0**2*3/8/np.pi/GRA
 	return rho0/a**3
@@ -159,7 +159,7 @@ def Jeansm(T, rho, mu = 0.63, gamma=5./3):
 	MJ = np.pi/6 * cs**3/(GRA**3*rho)**0.5
 	return MJ/Msun
 	
-def Mreion(z, delta=200, T=2e4):#, Ob=0.048, Om=0.315):
+def Mreion(z, delta=200, T=2e4):#, Ob=0.048, Om=0.3089):
 	rho = rhom(1/(1+z)) * delta
 	MJ = Jeansm(T, rho)
 	return MJ
