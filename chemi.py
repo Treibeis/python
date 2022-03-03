@@ -1,10 +1,11 @@
 from txt import *
 from scipy.optimize import root
-kB = 1.3806e-16
+kB = 1.3806e-16 # Boltzmann constant
 
-def xh(X = 0.76):
+def xh(X = 0.75):
 	return 4.0*X/(1.0+3.0*X)
 
+# reaction rate coefficients (in cgs units)
 def rates(J_21, T, nh, nh2, z, T0, fnth):
 	k = np.zeros(34+10+2+1+3+2,dtype='float')
 	Tcmb = T0*(1+z)
@@ -40,13 +41,13 @@ def rates(J_21, T, nh, nh2, z, T0, fnth):
 	else:
 		k[2] = 0.0
 	# Additional
-	if T<=4000.0: # H + H+ = H2+ + hnu ???
-		k[6] = 1.38e-23*(T**1.845)
-	else:
-		if T<1e5:
-			k[6] = -6.157e-17 + 3.255e-20*T - 4.152e-25*T**2
-		else:
-			k[6] = 0.0
+	#if T<=4000.0: # H + H+ = H2+ + hnu ???
+	#	k[6] = 1.38e-23*(T**1.845)
+	#else:
+	#	if T<1e5:
+	#		k[6] = -6.157e-17 + 3.255e-20*T - 4.152e-25*T**2
+	#	else:
+	#		k[6] = 0.0
 	alpha = -19.38-1.523*logT+1.118*logT**2-0.1269*logT**3 # GP98
 	k[6] = 10**alpha
 	if k[6]<=0.0:
@@ -60,10 +61,10 @@ def rates(J_21, T, nh, nh2, z, T0, fnth):
 	#k[9] = 1.3e-9 # H + H- = H2 + e-
 	if T<300:
 		k[9] = 1.5e-9
+		#logT2 = logT-2
+		#k[9] = 10**(-14.4-0.15*logT2**2-7.9e-3*logT2**4) # H + H- = H2 + e- CC11
 	else:
 		k[9] = 4e-9*T**-0.17 # GP98
-	logT2 = logT-2
-	#k[9] = 10**(-14.4-0.15*logT2**2-7.9e-3*logT2**4) # H + H- = H2 + e- CC11
 	#k[10] = 1.68e-8*(T/300.0)**-0.29 # e- + H2+ = 2H ???
 	k[10] = 2e-7*T**-0.5 # GP98
 	k[11] = 5.0e-6/tt # H2+ + H- = H2 + H Too efficient???
@@ -174,13 +175,12 @@ def rates(J_21, T, nh, nh2, z, T0, fnth):
 
 	# CMB (GP98)
 	k[47] = 0.0 #2.41e15*Tcmb**1.5 * np.exp(-39472/Tcmb)*8.76e-11*(1+z)**-0.58 # H + gamma = H+ + e-
-	#if z>100:
-	k[48] = 1.1e-1*Tcmb**2.13* np.exp(-8823/Tcmb) # H- + gamma = H + e-
-	#else:
-	k[48] += 8e-8*Tcmb**1.3*np.exp(-2.3e3/Tcmb) *fnth # H- + gamma = H + e- CC11, non-thermal photons
-	k[49] = (20*Tcmb**1.59* np.exp(-82000/Tcmb) + 1.63e7*np.exp(-32400/Tcmb))*0.5 # H2+ + gamma = H + H+ GP98, old
-	k[50] = 90*Tcmb**1.48*np.exp(-335000/Tcmb) # H2+ + gamma = 2H+ + e- GP98, old
-	k[51] = 2.9e2*Tcmb**1.56*np.exp(-178500/Tcmb) # H2 + gamma = H2+ + e-
+	if z>0:
+		k[48] = 1.1e-1*Tcmb**2.13* np.exp(-8823/Tcmb) # H- + gamma = H + e-
+		k[48] += 8e-8*Tcmb**1.3*np.exp(-2.3e3/Tcmb) *fnth # H- + gamma = H + e- CC11, non-thermal photons
+		k[49] = (20*Tcmb**1.59* np.exp(-82000/Tcmb) + 1.63e7*np.exp(-32400/Tcmb))*0.5 # H2+ + gamma = H + H+ GP98, old
+		k[50] = 90.0*Tcmb**1.48*np.exp(-335000/Tcmb) # H2+ + gamma = 2H+ + e- GP98, old
+		k[51] = 2.9e2*Tcmb**1.56*np.exp(-178500/Tcmb) # H2 + gamma = H2+ + e-
 	#k[51] = 3.0659e9*np.exp(-1.9e5/T) # CC11
 	
 	#k[51] = 1.3e3*Tcmb**1.45*np.exp(-60500/Tcmb) # Li + gamma = Li+ + e-
@@ -189,8 +189,20 @@ def rates(J_21, T, nh, nh2, z, T0, fnth):
 	#k[54] = 7e2*np.exp(-1900/Tcmb) # LiH+ + gamma = Li+ + H
 	return k
 
-#def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, nmax = 100, z  =5, T0 = 2.726):
-def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 5, T0 = 2.726, nmax = 100, Tcut=100, fnth=0):
+# evolve abundances with the implicit Euler method
+def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 5, T0 = 2.726, nmax = 100, Tcut=300, fnth=0):
+	"""
+		T: temperature
+		nin: input number densities
+		dt0: overall timestep
+		epsH: maximum changes of the abundances of key species (e-, H2 and HD)
+		Ns: number of species
+		xnh, xnhe, xnd, xnli: number densities of H, He, D, Li nuclei
+		Cr0, Ds0: formation and destruction rates from the last timestep
+		nmax: set the minimum timestep to dt0/nmax
+		Tcut: use equilibrium abundances for H2+ and H- when Tcmb(z)<Tcut
+		fnth: contribution of non-thermal CMB photons
+	"""
 	total = 0
 	out = np.zeros(Ns,dtype='float')
 	dt_cum = 0.0
@@ -199,7 +211,7 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 
 	ny = nin
 	while dt_cum<dt0:
 		k = rates(J_21, T, xnh, nin[3], z, T0, fnth)
-		Cr[5]=(k[21]+k[47])*ny[0]+k[22]*ny[6]+k[23]*ny[7]+(k[0]*ny[0]+k[1]*ny[6]+k[2]*ny[7])*ny[5] + k[48]*ny[2] + k[50]*ny[4] + k[51]*ny[3]
+		Cr[5]=(k[21]+k[47])*ny[0]+k[22]*ny[6]+k[23]*ny[7]+(k[0]*ny[0]+k[1]*ny[6]+k[2]*ny[7])*ny[5] #+ k[48]*ny[2] + k[50]*ny[4] + k[51]*ny[3]
 		Ds[5]=k[3]*ny[1]+k[4]*ny[7]+k[5]*ny[8]
 		if (dt*abs(Cr[5]-Ds[5]*ny[5])>epsH*abs(ny[5])) and (ny[5]>0) and dt>dt0/nmax:
 			dt = dt/2.0 #epsH*ny[5]/abs(Cr[5]-Ds[5]*ny[5])#
@@ -215,7 +227,7 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 
 			dt_cum = dt0
 		else:
 			dt_cum += dt
-		Cr[5]=k[21]*ny[0]+k[22]*ny[6]+k[23]*ny[7]+(k[0]*ny[0]+k[1]*ny[6]+k[2]*ny[7])*ny[5]# +k[24]*ny[2]+k[26]*ny[3]
+		Cr[5]=k[21]*ny[0]+k[22]*ny[6]+k[23]*ny[7]+(k[0]*ny[0]+k[1]*ny[6]+k[2]*ny[7])*ny[5] #+k[48]*ny[2] + k[50]*ny[4] + k[51]*ny[3]# +k[24]*ny[2]+k[26]*ny[3]
 		Ds[5]=k[3]*ny[1]+k[4]*ny[7]+k[5]*ny[8]
 		ny[5]=(ny[5]+Cr[5]*dt)/(1.e0+Ds[5]*dt)
 
@@ -240,7 +252,7 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 
 		ny[8]=(ny[8]+Cr[8]*dt)/(1.e0+Ds[8]*dt);
 #/**** calculate equilibrium abundance for H- *********************/
 		XNUM1=(k[8]*ny[0] + k[13]*ny[3])*ny[5];
-		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24] + k[48]# +k[11]*ny[4];
+		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24] + k[48] +k[11]*ny[4];
 		if T0*(1+z)<Tcut:
 			#print(XNUM1, XDENOM1)
 			if XDENOM1>1e-52:
@@ -253,7 +265,7 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 
 			ny[2] = (ny[2]+Cr[2]*dt)/(1.e0+Ds[2]*dt);
 #/**** calculate equilibrium abundance for H2+ ********************/
 		XNUM2=(k[6]*ny[0] + k[16]*ny[3]+k[20]*ny[2])*ny[1] + k[26]*ny[3] +k[51]*ny[3];
-		XDENOM2=k[7]*ny[0]+k[10]*ny[5] + k[49] + k[50] #+k[11]*ny[2]+k[25];
+		XDENOM2=k[7]*ny[0]+k[10]*ny[5] + k[49] + k[50] +k[11]*ny[2]+k[25];
 		if T0*(1+z)<Tcut:
 			if XDENOM2>1e-52:
 				ny[4]=XNUM2/XDENOM2
@@ -292,13 +304,14 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 
 			ny[0]=0.e0;
 
 		XNUM1=(k[8]*ny[0] + k[13]*ny[3])*ny[5];
-		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24] + k[48]# +k[11]*ny[4];
+		XDENOM1=(k[9]+k[19])*ny[0]+(k[12]+k[20])*ny[1]+k[18]*ny[5]+ k[24] + k[48] +k[11]*ny[4];
 		ny[2]=XNUM1/XDENOM1;
 
 		for i in range(9):
 			if ny[i]<1e-30:
 				ny[i] = 0.0
 
+		# D network
 		Cr[10]=k[30]*ny[9]*ny[1]+k[33]*ny[11]*ny[1]
 		Ds[10]=k[3]*ny[5]+k[31]*ny[0]+k[32]*ny[3]
 		ny[10]=min((ny[10]+Cr[10]*dt)/(1.0+Ds[10]*dt),xnd)
@@ -307,32 +320,32 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 
 		ny[11]=min((ny[11]+Cr[11]*dt)/(1.0+Ds[11]*dt),xnd)
 		ny[9]=xnd-ny[11]-ny[10]
 
-		Cr[12] = k[34]*ny[13]*ny[5]+k[42]*ny[15]*ny[5]+k[35]*ny[14]*ny[1]+k[39]*ny[16]*ny[0]
-		Ds[12] = k[41]*ny[1]+k[36]*ny[5]+k[37]*ny[0]+(k[44]+k[45])*ny[1]+k[46]*ny[2]
-		ny[12] = min((ny[12]+Cr[12]*dt)/(1.0+Ds[12]*dt),xnli)
+		# Li network
+		#Cr[12] = k[34]*ny[13]*ny[5]+k[42]*ny[15]*ny[5]+k[35]*ny[14]*ny[1]+k[39]*ny[16]*ny[0]
+		#Ds[12] = k[41]*ny[1]+k[36]*ny[5]+k[37]*ny[0]+(k[44]+k[45])*ny[s1]+k[46]*ny[2]
+		#ny[12] = min((ny[12]+Cr[12]*dt)/(1.0+Ds[12]*dt),xnli)
 
-		Cr[13] = k[43]*ny[0]*ny[15]+(k[44]+k[45])*ny[12]*ny[1]
-		Ds[13] = k[34]*ny[5]+k[40]*ny[1]
-		ny[13] = min((ny[13]+Cr[13]*dt)/(1.0+Ds[13]*dt),xnli)
+		#Cr[13] = k[43]*ny[0]*ny[15]+(k[44]+k[45])*ny[12]*ny[1]
+		#Ds[13] = k[34]*ny[5]+k[40]*ny[1]
+		#ny[13] = min((ny[13]+Cr[13]*dt)/(1.0+Ds[13]*dt),xnli)
 
-		Cr[15] = k[40]*ny[0]*ny[13]+k[41]*ny[1]*ny[12]
-		Ds[15] = k[43]*ny[0]+k[42]*ny[5]
-		ny[15] = min((ny[15]+Cr[15]*dt)/(1.0+Ds[15]*dt),xnli)
+		#Cr[15] = k[40]*ny[0]*ny[13]+k[41]*ny[1]*ny[12]
+		#Ds[15] = k[43]*ny[0]+k[42]*ny[5]
+		#ny[15] = min((ny[15]+Cr[15]*dt)/(1.0+Ds[15]*dt),xnli)
 
-		Cr[16] = k[37]*ny[12]*ny[0]+k[38]*ny[14]*ny[0]+k[46]*ny[2]*ny[12]
-		Ds[16] = k[39]*ny[0]
-		ny[16] = min((ny[16]+Cr[16]*dt)/(1.0+Ds[16]*dt),xnli)
+		#Cr[16] = k[37]*ny[12]*ny[0]+k[38]*ny[14]*ny[0]+k[46]*ny[2]*ny[12]
+		#Ds[16] = k[39]*ny[0]
+		#ny[16] = min((ny[16]+Cr[16]*dt)/(1.0+Ds[16]*dt),xnli)
 
-		Cr[14] = k[36]*ny[12]*ny[5]
-		Ds[14] = k[35]*ny[1]+k[38]*ny[0]
-		ny[14] = min((ny[14]+Cr[14]*dt)/(1.0+Ds[14]*dt),xnli)
+		#Cr[14] = k[36]*ny[12]*ny[5]
+		#Ds[14] = k[35]*ny[1]+k[38]*ny[0]
+		#ny[14] = min((ny[14]+Cr[14]*dt)/(1.0+Ds[14]*dt),xnli)
 
-		#ny[16] = xnli
-		ny[12] = min(max(0,xnli-ny[15]-ny[13]-ny[14]-ny[16]),xnli)
-		ny[13] = min(max(0,xnli-ny[12]-ny[14]-ny[15]-ny[16]),xnli)
-		ny[14] = min(max(0,xnli-ny[12]-ny[13]-ny[15]-ny[16]),xnli)
-		ny[15] = min(max(0,xnli-ny[12]-ny[13]-ny[14]-ny[16]),xnli)
-		ny[16] = min(max(0,xnli-ny[12]-ny[14]-ny[15]-ny[13]),xnli)
+		#ny[12] = min(max(0,xnli-ny[15]-ny[13]-ny[14]-ny[16]),xnli)
+		#ny[13] = min(max(0,xnli-ny[12]-ny[14]-ny[15]-ny[16]),xnli)
+		#ny[14] = min(max(0,xnli-ny[12]-ny[13]-ny[15]-ny[16]),xnli)
+		#ny[15] = min(max(0,xnli-ny[12]-ny[13]-ny[14]-ny[16]),xnli)
+		#ny[16] = min(max(0,xnli-ny[12]-ny[14]-ny[15]-ny[13]),xnli)
 
 		for i in range(17):
 			if ny[i]<1e-30:

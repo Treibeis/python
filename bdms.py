@@ -1,3 +1,4 @@
+# module for baryon-darkmatter scattering (BDSM)
 from cosmology import *
 from scipy.optimize import fsolve, curve_fit
 from scipy.special import erf
@@ -5,81 +6,8 @@ from scipy.integrate import odeint, ode
 from scipy.interpolate import interp1d
 from numba import njit
 
-z_t = lambda x: ZT(np.log10(x/1e9/YR))
-
-@njit
-def foralpha(x):
-	return (x-np.sin(x))/(2.*np.pi)
-@njit
-def fordelta(alpha, lim = 1e-42): 
-	Dnom = np.array([2.*(1.-np.cos(alpha))**3, lim]).max()
-	return 9.*(alpha-np.sin(alpha))**2. / Dnom
-
-lx = np.linspace(0, 2*np.pi, 10000)
-lal = foralpha(lx)
-lx = [x for x in lx]#+[2*np.pi]
-lal = [x for x in lal]#+[1.0]
-#@njit
-#def alpha_ap(f):
-	
-alpha_ap = interp1d(lal, lx)
-
-#alpha_ap = lambda x: 2*(np.arcsin(2*x-1)+np.pi/2)
-
-def delta_(z, zvir, dmax = 200.):
-	f0 = (1.+zvir)/(1.+z)
-	f = lambda x: foralpha(x)-f0**1.5
-	a0 = np.pi
-	alpha = fsolve(f, a0)[0]
-	d = fordelta(alpha)
-	return min(d, dmax)
-
-def delta(z, zvir, dmax = 200.):
-	f0 = (1.+zvir)/(1.+z) * (zvir<=z) + 1.0 * (zvir>z)
-	alpha = alpha_ap(f0**1.5)
-	d = fordelta(alpha)
-	return min(d, dmax)
-
-#def delta(z, zvir, dmax = 200.):
-#	f0 = (1.+zvir)/(1.+z)
-#	alpha = ((12*np.pi)**(2/3)*f0)**0.5
-
-def rho_z(z, zvir, dmax = 200., Om=0.315, h=0.6774, dz = 20):
-	rho_vir = dmax * rhom(1/(1+zvir), Om=Om, h=h)
-	out = delta(z, zvir, dmax) * rhom(1/(1+z), Om=Om, h=h)
-	return rho_vir * ((z-zvir)<=dz) * np.logical_or((out>=rho_vir), z<=zvir) + out * np.logical_or(((z-zvir)>dz), (z>zvir)*(out<=rho_vir))
-
-def Dlnrho(t1, t2, zvir, dmax = 200., Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, hat=1):
-	z1 = z_t(t1)
-	z2 = z_t(t2)
-	a1 = 1/(1+z1)
-	a2 = 1/(1+z2)
-	a = 0.5*(a1+a2)
-	dt = t2 - t1
-	drho = rho_z(z2, zvir, dmax, Om, h)-rho_z(z1, zvir, dmax, Om, h)
-	rho = rho_z(z1, zvir, dmax, Om, h)
-	#if dt<=0 or rho<=0:
-	#	return 0
-	#else:
-	if hat>0:
-		return drho/(rho*dt)
-	else:
-		return -3*H(a, Om, h, OR)
-
-def T_b(z, a1=1./119, a2=1./115, T0=2.726):
-	a = 1./(1+z)
-	return T0/(a*(1+a/(a1*(1+(a2/a)**1.5))))
-
-def T_dm(z, m = .3, T0=2.726):
-	zc = m*1e9*eV / ((3./2)*BOL*T0) - 1
-	Tc = T0*(1+zc)
-	return T0*(1+z) * (z>zc) + Tc*((1+z)/(1+zc))**2 * (z<=zc)
-
-def Tdot_adiabatic(z, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76):
-	mu = 4/(1+3*X)
-	a = 1/(1+z)
-	return -2*T_b(z)*H(a, Om, h, OR) #* 1.5*BOL*rhom(a, Om, h)*Ob/(PROTON*mu)
-
+# dT/dt in the standard CDM cosmology based on the fit from 
+# https://journals.aps.org/prd/abstract/10.1103/PhysRevD.82.083520
 def Tdot(z, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726):
 	mu = 4/(1+3*X)
 	a = 1/(1+z)
@@ -90,6 +18,7 @@ def Tdot(z, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./11
 
 GeV_to_mass = eV*1e9/SPEEDOFLIGHT**2	
 
+# cooling/heating in the IGM for the standard CDM cosmology
 def GammaC(z, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726):
 	a = 1/(1+z)
 	dT0 = Tdot(z, Om, Ob, OR, h, X, a1, a2, T0)/(a*H(a, Om, h, OR))
@@ -97,12 +26,15 @@ def GammaC(z, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./
 	gamma = (dT0-dT1)*a*H(a, Om, h, OR)/(T0/a-T_b(z, a1, a2, T0))
 	return gamma
 
+# relative velocity between gas and DM at redshift z
 def vbdm_z(z, v0 = 30., z0 = 1100.):
 	return v0*1e5*(1+z)/(1+z0)
 
+# critical velocity for heating-cooling transition
 def uthf(mb, mdm, Tb, Tdm):
 	return (Tb*BOL/mb+Tdm*BOL/mdm)**0.5
 
+# dv/dt due to friction between gas and DM
 #@jit(nopython=True)
 def drag(rho, v, Tb, Tdm, mb = PROTON, mdm = 0.3*GeV_to_mass, sigma = 8e-20):
 	uth = (Tb*BOL/mb+Tdm*BOL/mdm)**0.5
@@ -125,18 +57,8 @@ def Q_IDMB(rho, v, Tb, Tdm, mb = PROTON, mdm = 0.3*GeV_to_mass, sigma = 8e-20, g
 	out = mb*rho*sigma*1e20/(mdm+mb)**2 * (c + d)
 	return out*(gamma-1)
 	
-def Q_IDMB_mc(rho, v, Tb, Tdm, f, mb=PROTON, mdm=0.3*GeV_to_mass, sigma = 8e-20, gamma=5./3, Om=0.315, Ob=0.047):
-	uth = (Tb*BOL/mb + Tb*BOL*Ob/(mb*f*(Om-Ob)) )**0.5
-	#Tdm = Tb*Ob/(mb*f*(Om-Ob)) * mdm
-	r = max(v/uth, 0)
-	c = (Tdm-Tb)/uth**3 * ((2/np.pi)**0.5*np.exp(-r**2/2))
-	if v<=0:
-		d = 0
-	else:
-		d = mdm/v * (erf(r/2**0.5)-(2/np.pi)**0.5*np.exp(-r**2/2)*r)/BOL * (r>1e-5) + mdm/BOL * (2/np.pi)**0.5*r**2/(3*uth) * (r<=1e-5)
-	out = mb*rho*sigma*1e20/(mdm+mb)**2 * (c + d)
-	return out*(gamma-1)
-
+# evolution of gas temperature, DM temperature, and their relative velocity 
+# by BDMS, similar to the cool function in radcool
 def bdmscool(Tdm, Tb, v, rhob, rhodm, Mdm, sigma, gamma, X):
 	xh = 4*X/(1+3*X)
 	#a = 1/(1+z)
@@ -154,6 +76,8 @@ def bdmscool(Tdm, Tb, v, rhob, rhodm, Mdm, sigma, gamma, X):
 	dv = - (xh*DH + (1-xh)*DHe)
 	return [dTdm, dTb, dv]
 
+# thermal history of the IGM modified by BDMS, where the cooling/heating
+# and chemistry in gas are assumed to be identical to the CDM case
 def thermalH(z0 = 1000., z1 = 9.0, v0 = 30., Mdm = 0.3, sigma = 8e-20, Om = 0.315, Ob = 0.048, OR = 9.54e-5, h = 0.6774, X = 0.76, a1=1./119, a2=1./115, T0=2.726, nb = 100000, vmin = 1e-20):
 	Mb = PROTON*4/(1+3*X)/GeV_to_mass*(Om-Ob)/Ob
 	Tmin = T_b(z1)/(1+Mb/Mdm)

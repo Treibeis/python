@@ -1,4 +1,4 @@
-#from coolingf import *
+# cooling rates (in erg/s/cm^3), all quantities in cgs units
 from cosmology import *
 from numba import njit
 kB = BOL
@@ -106,6 +106,9 @@ def LambdaH2(T, nh2, nh):
 	#LH2 = LTE/(1.0+XNCRIT/nh)
 	LH2 = LOW*LTE/(LTE+LOW)
 	return nh2*LH2
+	
+# dT/dt determined by the cooling rate
+# ntot: overall number density, n: number densities of different species
 @njit
 def cool(T, ntot, n, J_21, z, gamma, X, T0):
 	Tcmb = T0*(1+z)

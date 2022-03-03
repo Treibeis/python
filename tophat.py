@@ -1,75 +1,137 @@
-from cosmology import *
-from bdms import *
-from radcool import *
-import chemi as chemi1
-import cheminet as chemi2
-from txt import *
+# onezone model for first star formation, originally used to explore the effect 
+# if baryon-dark matter scattering (BDMS) on first star formation
+# see https://ui.adsabs.harvard.edu/abs/2019MNRAS.487.4711L/abstract
+from cosmology import * # basic functions for cosmology
+from bdms import * # module for baryon-dark matter scattering
+from radcool import * # cooling rates
+import chemi as chemi1 # chemical network
+#import cheminet as chemi2
+from txt import * # file IO
 import os
-import multiprocessing as mp
+import multiprocessing as mp # https://docs.python.org/3/library/multiprocessing.html
 import time
-import hmf
+import hmf # module for halo mass function, https://github.com/halomod/hmf
 import hmf.wdm
-from numba import njit
+from numba import njit # to make python code faster, https://numba.pydata.org/
+import matplotlib
+#import mpl_toolkits.mplot3d
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
+plt.style.use('tableau-colorblind10')
 
 proton = PROTON/GeV_to_mass
 electron = ELECTRON/GeV_to_mass
+# physical constants & units are defined in cosmology
 
-def debye(eps):
-	return 68-2*np.log(eps/1e-6)
+@njit
+def foralpha(x):
+	return (x-np.sin(x))/(2.*np.pi)
+@njit
+def fordelta(alpha, lim = 1e-42): 
+	Dnom = np.array([2.*(1.-np.cos(alpha))**3, lim]).max()
+	return 9.*(alpha-np.sin(alpha))**2. / Dnom
 
-def sigmilli(eps, mx, mb, norm=1e20):
-	Mx, Mb = mx*GeV_to_mass, mb*GeV_to_mass
-	ut = Mx*Mb/(Mx+Mb)
-	out = 2*np.pi*(1./137)**2*eps**2*debye(eps)/ut**2
-	return out/norm * (HBAR*SPEEDOFLIGHT)**2
+lx = np.linspace(0, 2*np.pi, 10000)
+lal = foralpha(lx)
+lx = [x for x in lx]#+[2*np.pi]
+lal = [x for x in lal]#+[1.0]
+#@njit
+#def alpha_ap(f):
 	
-def eps_m_f(mx, f, emax=1e-4):
-	a = 1.7e-4*(mx/0.3)*(1e-2/f)**(3./4)
-	b = a*(a>=emax) + emax*(a<emax)
-	out = a * (mx<=0.04*(f/1e-2)) + b * (mx>0.04*(f/1e-2))
-	#a = 6e-7*(mx/1e-3)*(1e-2/f)**(3./4)
-	return a*(a<=1e-4)*(a>=1e-6) + 1e-4*(a>1e-4)+ 1e-6*(a<1e-6)
-	
-def sigmc(eps, mx, f, norm=1e20, xe=1e-4):
-	#Tmin = T_b(17)/(1+mx/proton/f)
-	#dT = 0.01*Tmin
-	#p = Q_IDMB_mc(1, 0, 4, 4+dT, f, PROTON, mx*GeV_to_mass)
-	#p0 = Q_IDMB(1, 0, Tmin, Tmin*1.01, PROTON, mx*GeV_to_mass)
-	#e = Q_IDMB_mc(1, 0, 4, 4+dT, f, ELECTRON, mx*GeV_to_mass)
-	#e0 = Q_IDMB(1, 0, Tmin, Tmin*1.01, PROTON, mx*GeV_to_mass)
-	T = T_b(17)/(1+6.*f/mx)
-	T0 = T_b(17)/(1+6./mx)
-	a = sigmilli(eps, mx, proton) #*abs(p/p0)
-	b = sigmilli(eps, mx, electron)*xe #*abs(e/e0)
-	return (a+b)*f * (T0/T)**(3/2)
-	
-zi_tag = 2
+alpha_ap = interp1d(lal, lx)
 
+#alpha_ap = lambda x: 2*(np.arcsin(2*x-1)+np.pi/2)
+
+# overdensity in the top-hat model, calculated with fsolve
+def delta_(z, zvir, dmax = 200.):
+	f0 = (1.+zvir)/(1.+z)
+	f = lambda x: foralpha(x)-f0**1.5
+	a0 = np.pi
+	alpha = fsolve(f, a0)[0]
+	d = fordelta(alpha)
+	return min(d, dmax)
+
+# overdensity in the top-hat model, calculated with interpolation
+def delta(z, zvir, dmax = 200.):
+	f0 = (1.+zvir)/(1.+z) * (zvir<=z) + 1.0 * (zvir>z)
+	alpha = alpha_ap(f0**1.5)
+	d = fordelta(alpha)
+	return min(d, dmax)
+
+#def delta(z, zvir, dmax = 200.):
+#	f0 = (1.+zvir)/(1.+z)
+#	alpha = ((12*np.pi)**(2/3)*f0)**0.5
+
+# density evolution in the top-hat model
+def rho_z(z, zvir, dmax = 200., Om=0.3089, h=0.6774, dz = 20):
+	rho_vir = dmax * rhom(1/(1+zvir), Om=Om, h=h)
+	out = delta(z, zvir, dmax) * rhom(1/(1+z), Om=Om, h=h)
+	return rho_vir * ((z-zvir)<=dz) * np.logical_or((out>=rho_vir), z<=zvir) + out * np.logical_or(((z-zvir)>dz), (z>zvir)*(out<=rho_vir))
+
+# dlnrho/dt in the top hat model
+def Dlnrho(t1, t2, zvir, dmax = 200., Om = 0.3089, Ob = 0.048, OR = 9.54e-5, h = 0.6774, hat=1):
+	z1 = ZT(t1)
+	z2 = ZT(t2)
+	a1 = 1/(1+z1)
+	a2 = 1/(1+z2)
+	a = 0.5*(a1+a2)
+	dt = t2 - t1
+	drho = rho_z(z2, zvir, dmax, Om, h)-rho_z(z1, zvir, dmax, Om, h)
+	rho = rho_z(z1, zvir, dmax, Om, h)
+	#if dt<=0 or rho<=0:
+	#	return 0
+	#else:
+	if hat>0:
+		return drho/(rho*dt)
+	else:
+		return -3*H(a, Om, h, OR)
+
+# threshold mass for molecular and atomic cooling
+# fits from https://iopscience.iop.org/article/10.1088/0004-637X/694/2/879
+Mup = lambda z: 2.5e7*((1+z)/10)**-1.5
+Mdown = lambda z: 1.54e5*((1+z)/31)**-2.074 #1e6*((1+z)/10)**-2
+
+# initial abundances at 3 different redshifts, from G913, 
+# see https://www.annualreviews.org/doi/abs/10.1146/annurev-astro-082812-141029
+zi_tag = 2 # 0: zi=300, 1: zi=800, 2: zi=1000
+# 17 species:
+	#0: XH, 1: XH+, 2: XH-, 3: XH2, 4: XH2+,
+	#5: Xe, 6: XHe, 7: XHe+, 8: XHe++, 
+	#9: XD, 10: XD+, 11: XHD,
+	#12: Li, 13: Li+, 14: Li-, 15: LiH+, 16: LiH
+# abundances of the species involving He/D/Li are defined with respect to He/D/Li nuclei
+# while those of the other species are defined with respect to H nuclei 
+# the effect of Li is negligible and by default the Li network is turned off 
 if zi_tag==0:
 	z0_default = 300
 	x0_default = [1., 5e-4, 2.5e-19, 2e-11, 3e-16] + \
-			 [5e-4, 1.0, 1.4e-20, 0.0] + \
+			 [5e-4, 1.0, 4.7e-19, 0.0] + \
 			 [1.0, 5e-4, 8.4e-11] + \
 			 [1.0, 1e-4, 0, 0, 1e-14]
 elif zi_tag==1:
 	z0_default = 800
 	x0_default = [1., 2e-3, 1.6e-20, 1.3e-12, 4e-18] + \
-			 [2e-3, 1.0, 1.4e-18, 0.0] + \
+			 [2e-3, 1.0, 4.7e-16, 0.0] + \
 			 [1.0, 2e-3, 3.4e-12] + \
 			 [1.0, 2.2e-9, 0, 0, 0]
 else:
 	z0_default = 1000
 	x0_default = [.9, 1e-1, 1.5e-19, 1.2e-13, 7.6e-18] +\
-			 [1e-1, 1.0, 2.7e-16, 0.0]+ \
+			 [1e-1, 1.0, 9e-15, 0.0]+ \
 			 [0.9, 1e-1, 3.4e-13] + \
 			 [1.0, 1e-10, 0, 0, 0]
 
-
-def initial(z0 = z0_default, v0 =30, mode = 0, Mdm = 0.3, sigma = 8e-20, x0 = x0_default, z00 = 1100, Om = 0.315, Ob = 0.048, h = 0.6774, T0 = 2.726, vmin = 0.0):
-	#0: XH, 1: XH+, 2: XH-, 3: XH2, 4: XH2+,
-	#5: Xe, 6: XHe, 7: XHe+, 8: XHe++, 
-	#9: XD, 10: XD+, 11: XHD,
-	#12: Li, 13: Li+, 14: Li-, 15: LiH+, 16: LiH
+# set the initial condition
+# mode=0: CDM IGM thermal history, mode=1: BDMS-regulated  
+def initial(z0 = z0_default, v0 =30, mode = 0, Mdm = 0.3, sigma = 8e-20, x0 = x0_default, z00 = 1100, Om = 0.3089, Ob = 0.048, h = 0.6774, T0 = 2.726, vmin = 0.0):
+	"""
+		z0: initial redshift
+		v0: baryon-DM streaming motion velocity at z=1100
+		Mdm, sigma, vmin: BDMS parameters (mass, cross section coefficient...)
+		x0: initial abundances
+		z00: starting redshift if the thermal history needs to be calculated
+		Om, Ob, h, T0: cosmological parameters
+	"""
 	d = {}
 	if mode!=0:
 		d0 = thermalH(z00, z0, v0, Mdm, sigma, Om, Ob, T0=T0, h=h)
@@ -86,12 +148,27 @@ def initial(z0 = z0_default, v0 =30, mode = 0, Mdm = 0.3, sigma = 8e-20, x0 = x0
 
 init = initial()
 
-def M_T(T, z, delta, Om = 0.315):
+# halo mass for a given virial temperature
+def M_T(T, z, delta, Om = 0.3089):
 	return (T/(delta*Om/(200*0.315))**(1/3)*10/(1+z)/190356.40337133306)**(3/2)*1e10
 
+# overdensity at the halo scale
 delta0 = 200.
 
-def coolt(Tb_old, Tdm_old, v_old, nb, nold, rhob_old, rhodm_old, z, mode, Mdm, sigma, gamma, Om, Ob = 0.048, h = 0.6774, X = 0.76, J_21 = 0, T0 = 2.726, vmin = 0.0):
+# cooling timescale, mode=0: CDM, mode=1: include BDMS
+def coolt(Tb_old, Tdm_old, v_old, nb, nold, rhob_old, rhodm_old, z, mode, Mdm, sigma, gamma, Om=0.3089, Ob = 0.048, h = 0.6774, X = 0.75, J_21 = 0, T0 = 2.726, vmin = 0.0):
+	"""
+		Tb_old: gas temperature
+		Tdm_old: DM temperature
+		v_old: baryon-DM relative velocity
+		nb: overall number density of particles
+		nold: number densities of different species (an array of 17 elements)
+		rhob_old: mass density of gas
+		rhodm_old: mass density of DM
+		gamma: adiabatic index
+		J_21: strength of the LW background
+		X: primordial hydrogen mass fraction
+	"""
 	xh = 4*X/(1+3*X)
 	dTs_dt = [0]*3
 	if mode!=0:
@@ -104,13 +181,23 @@ def coolt(Tb_old, Tdm_old, v_old, nb, nold, rhob_old, rhodm_old, z, mode, Mdm, s
 	else:
 		return -Tb_old/dTb_dt
 
-@njit	
-def GammaC0(over, xe):
-	#logG = np.log10(over) * 1.115724778945266 -18.31281413734767
-	return 0.0 #10**logG * xe
-
-def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, Mdm = 0.3, sigma = 8e-20, num = int(1e3), epsT = 1e-3, epsH = 1e-2, dmax = 18*np.pi**2, gamma = 5/3, X = 0.76, D = 2.38e-5, Li = 4.04e-10, T0 = 2.726, Om = 0.315, Ob = 0.048, h = 0.6774, dtmin = YR, J_21=0.0, Tmin = 1., vmin = 0.0, nmax = int(1e6), init =init, hat=1, fnth=1):
-	start = time.time()
+# main function that follows the thermal and chemical evolution of a "cloud"
+# mode=0: CDM, mode=1: include BDMS
+#hat=0: IGM (no collapse), hat=1: tophat model for halo collapse
+def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, Mdm = 0.3, sigma = 8e-20, num = int(1e3), epsT = 1e-3, epsH = 1e-2, dmax = 18*np.pi**2, gamma = 5/3, X = 0.75, D = 2.38e-5, Li = 4.04e-10, T0 = 2.726, Om = 0.3089, Ob = 0.048, h = 0.6774, dtmin = YR, J_21=0.0, Tmin = 1., vmin = 0.0, nmax = int(1e6), init =init, hat=1, fnth=0.17):
+	"""
+		Mh, zcir: halo mass and redshift
+		tpost: duration of the run after virialization in unit of 1/H(a)
+		num: set maximum timestep
+		epsT, epsH: maximum changes of temperature and abundances
+		dmax: maximum overdensity
+		D/Li: primordial abundance of D/Li nuclei (with respect to H nuclei)
+		dtmin: initial timestep
+		nmax: set the timestep to smaller values at the early stage for stability
+		init: initial condition data
+		fnth: contribution of non-thermal CMB photons
+	"""
+	#start = time.time()
 	#print(Mdm, sigma, init['Tb'], init['Tdm'], init['vbdm'])
 	xh = 4.0*X/(1.0+3.0*X)
 	xhe, xd, xli = 1-xh, D, Li
@@ -171,9 +258,7 @@ def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, M
 			if mode!=0:
 				dTs_dt_old = bdmscool(Tdm_old, Tb_old, v_old, rhob_old, rhodm_old, Mdm, sigma, gamma, X)
 			dTb_dt_old = cool(max(Tb_old, 10*Tmin), nb, nold*nb, J_21, z0, gamma, X, T0) \
-						+ dTs_dt_old[1] + dlnrho_dt_old*(gamma-1)*Tb_old \
-						+ GammaC0(rhob_old/rhom(1/(1+z0))*Om/Ob, yy[5])*max(T0*(1+z0)-Tb_old, 0)
-						#+ GammaC(z0, Om, Ob, h = h, X = X, T0 = T0)*(T0*(1+z0)-Tb_old)
+						+ dTs_dt_old[1] + dlnrho_dt_old*(gamma-1)*Tb_old 
 			dTdm_dt_old = dTs_dt_old[0] + dlnrho_dt_old*(gamma-1)*Tdm_old
 			dv_dt_old = dTs_dt_old[2] + dlnrho_dt_old*(gamma-1)*v_old/2
 		else:
@@ -211,12 +296,12 @@ def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, M
 		#if count<10:
 		#	print(nold, Tb_old)
 		t_cum += abund[1]
-		z = z_t(t_cum)
+		z = ZT(t_cum)
 		dlnrho_dt = Dlnrho(t_cum, t_cum + abund[1]/2.0, zvir, dmax, hat=hat)
 		uth = (Tb_old*BOL/PROTON+Tdm_old*BOL/(Mdm*GeV_to_mass))**0.5
 		if mode!=0: #and (Tb_old>Tdm_old or v_old>vmin*uth):
 			dTs_dt = bdmscool(Tdm_old, Tb_old, v_old, rhob_old, rhodm_old, Mdm, sigma, gamma, X)
-		dTb_dt = cool(max(Tb_old,10*Tmin), nb, nold*nb, J_21, z, gamma, X, T0) + dTs_dt[1] + GammaC0(rhob_old/rhom(1/(1+z))*Om/Ob, yy[5])*max(T0*(1+z)-Tb_old, 0) #+ GammaC(z, Om, Ob, h = h, X = X, T0 = T0)*(T0*(1+z)-Tb_old)
+		dTb_dt = cool(max(Tb_old,10*Tmin), nb, nold*nb, J_21, z, gamma, X, T0) + dTs_dt[1]
 		if tag0==0:
 			dTb_dt += dlnrho_dt*(gamma-1)*Tb_old
 		dTdm_dt = dTs_dt[0] + dlnrho_dt*(gamma-1)*Tdm_old
@@ -272,7 +357,7 @@ def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, M
 	d['v'] = np.array(lv)
 	d['rho'] = np.array(lrhob) + np.array(lrhodm)
 	d['nb'] = np.array(lrhob)/mgas
-	d['X'] = np.array(lX)
+	d['X'] = np.array(lX) # abundances
 	d['rat'] = Tb_old/TV
 	d['rat0'] = tpost/(t1 + tpost)
 	d['s'] = int(tpost/tmax > Tb_old/TV)
@@ -281,51 +366,22 @@ def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, M
 	d['rat1'] = Tb_V/TV
 	d['rat2'] = tcool/tffV
 	d['m'] = M_T(Tb_V/d['rat0'], zvir, dmax)
-	d['pV'] = pV
-	d['pV_pri'] = pV_pri
+	d['pV'] = pV  # state of the system at virialization
+	d['pV_pri'] = pV_pri # important quantities at virialization
 	d['para'] = para
-	end = time.time()
+	#end = time.time()
 	#print(t_cum-t1)
 	#print('Time taken: {} s'.format(end-start))
-	print(count, total)
+	#print(count, total)
 	return d
 
-Mup = lambda z: 2.5e7*((1+z)/10)**-1.5
-Mdown = lambda z: 1.54e5*((1+z)/31)**-2.074 #1e6*((1+z)/10)**-2
+# correct the threshold mass for streaming motion
+def mth_stm(mth, z, v0, beta = 0.7, dmax = delta0):
+	return mth * (1 + beta*vbdm_z(z, v0)**2/Vcir(mth, z, 1)**2)
 
-def Vcool(z, v0, vc = 3.714e5, alpha = 4.015):
-	vbd = vbdm_z(z, v0)
-	return ((alpha*vbd)**2 + vc**2)**0.5
-
-def stored(d, Mh = 1e6, zvir = 20, v0 = 30, mode = 0, Mdm = 0.3, sigma = 8e-20, rep = 'data/'):
-	if not os.path.exists(rep):
-		os.makedirs(rep)
-	out0 = [d['t'], d['z'], d['Tb'], d['Tdm'], d['v'], d['rho'], d['nb']]
-	out1 = [[d['rat'], d['rat0'], d['rat1'], d['rat2'], d['s'], d['Tvir'], d['TbV'], d['m']]]
-	base = 'M'+str(int(Mh/1e6 * 100)/100)+'_z'+str(zvir)+'_v'+str(int(v0*100)/100)
-	if mode!=0:
-		base = base + '_Mdm'+str(Mdm)+'_sigma'+str(sigma)
-	totxt(rep+'dataD_'+base+'.txt',out0,0,0,0)
-	totxt(rep+'dataX_'+base+'.txt',d['X'],0,0,0)
-	totxt(rep+'dataP_'+base+'.txt',out1,0,0,0)
-	return d
-
-def readd(Mh = 1e6, zvir = 20, v0 = 30, mode = 0, Mdm = 0.3, sigma = 8e-20, dmax = 18*np.pi**2, rep = 'data/'):
-	base = 'M'+str(int(Mh/1e6 * 100)/100)+'_z'+str(zvir)+'_v'+str(int(v0*100)/100)
-	if mode!=0:
-		base = base + '_Mdm'+str(Mdm)+'_sigma'+str(sigma)
-	rd0 = np.array(retxt(rep+'dataD_'+base+'.txt',7,0,0))
-	rd1 = np.array(retxt(rep+'dataP_'+base+'.txt',1,0,0)[0])
-	d = {}
-	d['X'] = np.array(retxt(rep+'dataX_'+base+'.txt',17,0,0))
-	d['t'], d['z'], d['Tb'], d['Tdm'], d['v'], d['rho'], d['nb'] = \
-		rd0[0], rd0[1], rd0[2], rd0[3], rd0[4], rd0[5], rd0[6]
-	d['rat'], d['rat0'], d['rat1'], d['rat2'], d['s'], d['Tvir'], d['TbV'] = \
-		rd1[0], rd1[1], rd1[2], rd1[3], rd1[4], rd1[5], rd1[6]
-	d['m'] = M_T(d['TbV']/d['rat0'], zvir, dmax)
-	return d
-
-def Mth_z(z1, z2, nzb = 10, m1 = 1e2, m2 = 1e10, nmb = 100, mode = 0, z0 = z0_default, v0 = 30, Mdm = 0.3, sigma = 8e-20, rat = 1.0, dmax = 18*np.pi**2, Om = 0.315, h = 0.6774, fac = 1e-3, vmin = 0.0, alpha = 3., sk = False, init = init):
+# mass threshold for efficient cooling, defined by tcool/tff = rat
+# sk=True: modify the baryon-DM relative velocity from virialization
+def Mth_z(z1, z2, nzb = 10, m1 = 1e2, m2 = 1e10, nmb = 100, mode = 0, z0 = z0_default, v0 = 30, Mdm = 0.3, sigma = 8e-20, rat = 1.0, dmax = 18*np.pi**2, Om = 0.3089, h = 0.6774, fac = 1e-3, vmin = 0.0, beta = 0.7, sk = False, init = init):
 	m0 = (m1*m2)**0.5
 	lz = np.linspace(z1, z2, nzb)
 	#lz = np.logspace(np.log10(z1), np.log10(z2), nzb)
@@ -387,8 +443,8 @@ def Mth_z(z1, z2, nzb = 10, m1 = 1e2, m2 = 1e10, nmb = 100, mode = 0, z0 = z0_de
 					mth = 10**rat_m(np.log10(rat))
 		#if mode!=0:
 		mth0 = mth
-		mth = mth * (1+alpha*d['pV'][2]**2/Vcir(mth, z, delta0)**2/(dmax/delta0)**(2/3))**(3/2)
-		print(Mdm, sigma, mth/1e6, mth0/1e6, z)#mth_stm(mth0, z, v0, alpha)/1e6)
+		mth = mth * (1+beta*d['pV'][2]**2/Vcir(mth, z, delta0)**2/(dmax/delta0)**(2/3))**(3/2)
+		print(Mdm, sigma, mth/1e6, mth0/1e6, z)
 		out.append(mth)
 		lxh2.append(d['pV_pri'][0])
 		lxhd.append(d['pV_pri'][1])
@@ -397,10 +453,10 @@ def Mth_z(z1, z2, nzb = 10, m1 = 1e2, m2 = 1e10, nmb = 100, mode = 0, z0 = z0_de
 		lvr.append(d['pV_pri'][4])
 	return [np.array(out), lz, lxh2, lxhd, lxe, lTb, lvr]
 
-def mth_stm(mth, z, v0, alpha = 3., dmax = delta0):
-	return mth * (1 + alpha*vbdm_z(z, v0)**2/Vcir(mth, z, 1)**2)
-
-def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, z = 20, dmax = 200, nbin = 10, fac = 1e-3, rat = 1.0, ncore=4, nmb = 100, alpha = 3., sk = False):
+# scan the parameter space of BDMS to derive the mass threshold, 
+# abundances of H2, HD, electrons, gas temperature and gas-DM velocity right 
+# before virialization 
+def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, z = 20, dmax = 200, nbin = 10, fac = 1e-3, rat = 1.0, ncore=4, nmb = 100, beta = 0.7, sk = False):
 	lm = np.logspace(m1, m2, nbin)
 	ls = np.logspace(s1, s2, nbin)
 	X, Y = np.meshgrid(lm, ls, indexing = 'ij')
@@ -419,7 +475,7 @@ def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, z = 20, dmax = 200, nbin 
 		out = []
 		for i in range(pr0, pr1):
 			init = initial(Mdm = lm[i], sigma = ls[j]*1e-20, v0 = v0, mode = 1)
-			d = Mth_z(z,z,1, Mdm = lm[i], sigma = ls[j]*1e-20, v0 = v0, dmax = dmax, rat = rat, fac = fac, nmb = nmb, mode = 1, alpha = alpha, sk = sk, init = init)
+			d = Mth_z(z,z,1, Mdm = lm[i], sigma = ls[j]*1e-20, v0 = v0, dmax = dmax, rat = rat, fac = fac, nmb = nmb, mode = 1, beta = beta, sk = sk, init = init)
 			out.append([x[0] for x in d])
 		output.put((pr0, np.array(out).T))
 	for i in range(nbin):
@@ -442,41 +498,185 @@ def parasp(v0 = 30., m1 = -4, m2 = 2, s1 = -1, s2 = 4, z = 20, dmax = 200, nbin 
 		#	lT[i,j] = -sol[0]
 		#	lTb[i,j] = sol[1]
 	return X, Y*1e-20, lMh, lXH2, lXHD, lXe, lTb, lvr
-
-def vdis(v, sigma = 30.):
-	return v**2 * np.exp(-v**2*1.5/sigma**2)
-
-def Nhalo(z, lm0, lv0, mode = 0, Mdm = 0.3, h = 0.6774, sigma = 30., vmax = 5.):
-	sel = lv0 < vmax*sigma
-	lm = lm0[sel]
-	lv = lv0[sel]
-	lw = vdis(lv, sigma)
-	Mmin = min(np.log10(np.min(lm*h))-1, np.log10(Mup(z))-1)
-	if mode == 0:
-		hmf_ = hmf.MassFunction()
-		hmf_.update(n=0.966, sigma_8=0.829,cosmo_params={'Om0':0.315,'H0':67.74},Mmin=Mmin,Mmax=np.log10(Mup(z))+2,z=z)
-	else:
-		hmf_ = hmf.wdm.MassFunctionWDM(wdm_mass=Mdm*1e6)
-		hmf_.update(n=0.966, sigma_8=0.829,cosmo_params={'Om0':0.315,'H0':67.74},Mmin=Mmin,Mmax=np.log10(Mup(z))+2,z=z)
-	intm = np.log10(hmf_.m/h)
-	intn = np.log10(hmf_.ngtm)
-	nm = interp1d(intm, intn)
-	lnpopIII = (10**nm(np.log10(lm))- 10**nm(np.log10(Mup(z))))
-	lnpopIII = lnpopIII * (lnpopIII>0)
-	out = lnpopIII * lw
-	return np.trapz(out, lv)/np.trapz(lw, lv)
 		
+# IO of results
+def stored(d, Mh = 1e6, zvir = 20, v0 = 30, mode = 0, Mdm = 0.3, sigma = 8e-20, rep = 'data/'):
+	if not os.path.exists(rep):
+		os.makedirs(rep)
+	out0 = [d['t'], d['z'], d['Tb'], d['Tdm'], d['v'], d['rho'], d['nb']]
+	out1 = [[d['rat'], d['rat0'], d['rat1'], d['rat2'], d['s'], d['Tvir'], d['TbV'], d['m']]]
+	base = 'M'+str(int(Mh/1e6 * 100)/100)+'_z'+str(zvir)+'_v'+str(int(v0*100)/100)
+	if mode!=0:
+		base = base + '_Mdm'+str(Mdm)+'_sigma'+str(sigma)
+	totxt(rep+'dataD_'+base+'.txt',out0,0,0,0)
+	totxt(rep+'dataX_'+base+'.txt',d['X'],0,0,0)
+	totxt(rep+'dataP_'+base+'.txt',out1,0,0,0)
+	return d
+
+def readd(Mh = 1e6, zvir = 20, v0 = 30, mode = 0, Mdm = 0.3, sigma = 8e-20, dmax = 18*np.pi**2, rep = 'data/'):
+	base = 'M'+str(int(Mh/1e6 * 100)/100)+'_z'+str(zvir)+'_v'+str(int(v0*100)/100)
+	if mode!=0:
+		base = base + '_Mdm'+str(Mdm)+'_sigma'+str(sigma)
+	rd0 = np.array(retxt(rep+'dataD_'+base+'.txt',7,0,0))
+	rd1 = np.array(retxt(rep+'dataP_'+base+'.txt',1,0,0)[0])
+	d = {}
+	d['X'] = np.array(retxt(rep+'dataX_'+base+'.txt',17,0,0))
+	d['t'], d['z'], d['Tb'], d['Tdm'], d['v'], d['rho'], d['nb'] = \
+		rd0[0], rd0[1], rd0[2], rd0[3], rd0[4], rd0[5], rd0[6]
+	d['rat'], d['rat0'], d['rat1'], d['rat2'], d['s'], d['Tvir'], d['TbV'] = \
+		rd1[0], rd1[1], rd1[2], rd1[3], rd1[4], rd1[5], rd1[6]
+	d['m'] = M_T(d['TbV']/d['rat0'], zvir, dmax)
+	return d
 
 if __name__=="__main__":
+	#"""
+	# examples of the onezone model predictions
+	tag = 0
+	m = 1e6
+	zvir = 20
+	v0 = 24
+	Mdm =  0.3 #0.001
+	sigma = 8e-20 #1e-17
+	if zi_tag==0:
+		rep0 = 'example_test0/'
+		drep = 'data0/'
+	else:
+		rep0 = 'example_test/'
+		drep = 'data_test/'
+	
+	if not os.path.exists(rep0):
+		os.makedirs(rep0)
+	dmax = delta0 * 100 
+	init0 = initial(v0 = v0, mode = 0, Mdm = Mdm, sigma = sigma)
+	init1 = initial(v0 = v0, mode = 1, Mdm = Mdm, sigma = sigma)
+	if tag==0:
+		#print('!!!')
+		d0 = stored(evolve(m, zvir, mode = 0, dmax = dmax, v0 = v0, init = init0, Mdm = Mdm, sigma = sigma), m, zvir, mode = 0, v0 = v0, rep = drep, Mdm = Mdm, sigma = sigma)
+		d1 = stored(evolve(m, zvir, mode = 1, dmax = dmax, v0 = v0, init = init1, Mdm = Mdm, sigma = sigma), m, zvir, mode = 1, v0 = v0, rep = drep, Mdm = Mdm, sigma = sigma)
+	else:
+		d0 = readd(m, zvir, v0, mode = 0, rep = drep, Mdm = Mdm, sigma = sigma)
+		d1 = readd(m, zvir, v0, mode = 1, rep = drep, Mdm = Mdm, sigma = sigma)
+	
+	mgas = mmw()*PROTON
+	nIGM = [rhom(1/(1+z))*0.048/(0.315*mgas) for z in d0['z']]
+	plt.figure()
+	plt.plot(d0['t'], d0['nb'], label='Top-hat model')
+	#plt.plot(d1['t'], d1['nb'], '--', label='BDMS')
+	plt.plot(d0['t'], nIGM, '-.', label='IGM')
+	plt.xlabel(r'$t\ [\mathrm{Myr}]$', size=14)
+	plt.ylabel(r'$n\ [\mathrm{cm^{-3}}]$', size=14)
+	plt.xticks(fontsize=14)
+	plt.yticks(fontsize=14)
+	plt.legend(fontsize=14)
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.tight_layout()
+	plt.savefig(rep0+'Example_n_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
+	plt.close()
+
+	plt.figure()
+	plt.plot(d0['t'], d0['Tb'], label=r'$T_{b}$, CDM')
+	plt.plot(d1['t'], d1['Tb'], '--', label=r'$T_{b}$, BDMS')
+	#plt.plot(d0['t'], d0['Tdm'], '-.', label=r'$T_{\chi}$, CDM')
+	plt.plot(d1['t'], d1['Tdm'], '-.', label=r'$T_{\chi}$, BDMS')
+	plt.plot(d1['t'], (d1['z']+1)*2.726, ':', label=r'$T_{cmb}$')
+	plt.plot(d1['t'], T_b(d1['z']), 'k-', label=r'$T_{b}(\mathrm{IGM})$, CDM', lw=0.5)
+	plt.xlabel(r'$t\ [\mathrm{Myr}]$', size=14)
+	plt.ylabel(r'$T\ [\mathrm{K}]$', size=14)
+	plt.xticks(fontsize=14)
+	plt.yticks(fontsize=14)
+	plt.legend(fontsize=14)
+	plt.xscale('log')
+	plt.yscale('log')
+	#plt.xlim(np.min(d0['t']), np.max(d0['t']))
+	#plt.ylim(1, 3e3)
+	plt.tight_layout()
+	plt.savefig(rep0+'Example_T_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
+	plt.close()
+
+	plt.figure()
+	plt.plot(d0['t'], d0['X'][3], label='CDM')
+	plt.plot(d1['t'], d1['X'][3], '--', label='BDMS')
+	plt.xlabel(r'$t\ [\mathrm{Myr}]$', size=14)
+	plt.ylabel(r'$x_{\mathrm{H_{2}}}$', size=14)
+	plt.xticks(fontsize=14)
+	plt.yticks(fontsize=14)
+	plt.legend(fontsize=14)
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.ylim(1e-8, np.max(d0['X'][3])*1.5)
+	plt.tight_layout()
+	plt.savefig(rep0+'Example_xH2_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
+	plt.close()
+
+	plt.figure()
+	plt.plot(d0['t'], d0['X'][5], label='CDM')
+	plt.plot(d1['t'], d1['X'][5], '--', label='BDMS')
+	plt.xlabel(r'$t\ [\mathrm{Myr}]$', size=14)
+	plt.ylabel(r'$x_{\mathrm{e}}$', size=14)
+	plt.xticks(fontsize=14)
+	plt.yticks(fontsize=14)
+	plt.legend(fontsize=14)
+	plt.xscale('log')
+	plt.yscale('log')
+	#plt.ylim(1e-5, 1e-3)
+	plt.tight_layout()
+	plt.savefig(rep0+'Example_xe_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
+	plt.close()
+
+	plt.figure()
+	#plt.plot(d0['t'], d0['X'][0], label='0')
+	plt.plot(d1['z'], d1['X'][3], label='3')
+	plt.plot(d1['z'], d1['X'][5], label='5')
+	#plt.plot(d0['t'], d0['X'][9], label='9')
+	plt.plot(d1['z'], d1['X'][10], label='10')
+	plt.plot(d1['z'], d1['X'][11], label='11')
+	plt.plot(d1['z'], d1['X'][2], label='2')
+	plt.plot(d1['z'], d1['X'][4], label='4')
+	#plt.plot(d1['t'], d1['X'][5], '--', label='BDMS')
+	#plt.xlabel(r'$t\ [\mathrm{Myr}]$')
+	plt.xlabel(r'$z$', size=14)
+	plt.ylabel(r'$x$', size=14)
+	plt.xticks(fontsize=14)
+	plt.yticks(fontsize=14)
+	plt.legend(fontsize=14)
+	plt.xscale('log')
+	plt.yscale('log')
+	#plt.ylim(1e-5, 1e-3)
+	plt.tight_layout()
+	plt.savefig(rep0+'Example_X_z_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
+	plt.close()
+	#plt.show()
+
+	vIGM = [vbdm_z(z, v0)/1e5 for z in d0['z']]
+	plt.figure()
+	plt.plot(d0['t'], d0['v']/1e5, label='CDM')
+	plt.plot(d1['t'], d1['v']/1e5, '--', label='BDMS')
+	plt.plot(d0['t'], vIGM, '-.', label='IGM')
+	plt.xlabel(r'$t\ [\mathrm{Myr}]$', size=14)
+	plt.ylabel(r'$v_{b\chi}\ [\mathrm{km\ s^{-1}}]$', size=14)
+	plt.xticks(fontsize=14)
+	plt.yticks(fontsize=14)
+	plt.legend(fontsize=14)
+	plt.ylim(np.min(vIGM)/10, np.max(vIGM)*10)
+	plt.xscale('log')
+	plt.yscale('log')
+	plt.tight_layout()
+	plt.savefig(rep0+'Example_vbDM_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
+	plt.close()
+	#"""
+
+
+	# 2D maps of some quantities in the BDMS parameter space
+	"""
 	tag = 1
 	v0 = 24 #60
 	nbin = 32 #64
-	ncore = 8
-	dmax = delta0 * 100
+	ncore = 4
+	dmax = delta0 * 100 # typical overdensity for the star forming cloud
 	rat = 1.
 	fac = 1e-3
-	#alpha0 = 3.
-	alpha = 0.7
+	beta = 0.7
 	sk = False
 	#sk = True
 	if zi_tag==0:
@@ -488,16 +688,15 @@ if __name__=="__main__":
 		os.makedirs(rep)
 	init0 = initial(v0 = v0, mode = 0)
 	init1 = initial(v0 = v0, mode = 1)
-
-	"""
+	
 	if tag==0:
-		d = Mth_z(zvir, 30, 2, v0 = v0, dmax = dmax, Mdm = 0.3, sigma = 8e-20, mode = 0, rat = rat, alpha = alpha, init = init0)
-		d_ = Mth_z(zvir, 30, 2, v0 = v0, dmax = dmax, Mdm = 0.3, sigma = 8e-20, mode = 1, rat = rat, alpha = alpha, init = init1)
+		d = Mth_z(zvir, 30, 2, v0 = v0, dmax = dmax, Mdm = 0.3, sigma = 8e-20, mode = 0, rat = rat, beta = beta, init = init0)
+		d_ = Mth_z(zvir, 30, 2, v0 = v0, dmax = dmax, Mdm = 0.3, sigma = 8e-20, mode = 1, rat = rat, beta = beta, init = init1)
 		print('Mth at z = 20: {} 10^6 Msun (CDM)'.format(d[0][0]/1e6))
 		print('Mth at z = 20: {} 10^6 Msun (BDMS)'.format(d_[0][0]/1e6))
 		totxt(rep+'ref_'+str(v0)+'.txt', np.array(d).T, 0,0,0)
 		totxt(rep+'default_'+str(v0)+'.txt', np.array(d_).T,0,0,0)
-		X, Y, Mh, XH2, XHD, Xe, Tb, Vr = parasp(v0, m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = nbin, ncore = ncore, dmax = dmax, fac = fac, rat = rat, alpha = alpha, sk = sk, z = zvir)
+		X, Y, Mh, XH2, XHD, Xe, Tb, Vr = parasp(v0, m1 = -4, m2 = 2, s1 = -1, s2 = 4, nbin = nbin, ncore = ncore, dmax = dmax, fac = fac, rat = rat, beta = beta, sk = sk, z = zvir)
 		totxt(rep+'X_'+str(v0)+'.txt',X,0,0,0)
 		totxt(rep+'Y_'+str(v0)+'.txt',Y,0,0,0)
 		totxt(rep+'Mh_'+str(v0)+'.txt',Mh,0,0,0)
@@ -520,7 +719,7 @@ if __name__=="__main__":
 	Vr = Vr*(Vr>Vr0) + Vr0*(Vr<=Vr0)
 
 	refMh, z, xH2r, xHDr, xer, Tbr, vrr = retxt(rep+'ref_'+str(v0)+'.txt',1,0,0)[0]
-	#refMh = mth_stm(refMh, 17, v0, alpha = alpha0)
+	#refMh = mth_stm(refMh, 17, v0, beta = beta)
 	print('Reference mass thresold: {} 10^6 Msun'.format(refMh/1e6))
 	print('Reference H2 abundance: {} * 10^-4'.format(xH2r*1e4))
 	print('Reference HD abundance: {} * 10^-3'.format(xHDr*1e3))
@@ -629,22 +828,19 @@ if __name__=="__main__":
 	plt.close()
 	"""
 
+	# dependence of the threshold and other quantities on redshift
 	"""
-
-	#lm, lz, lxh2, lxhd = Mth_z(10, 100, 46, mode = 0, rat = rat, dmax = dmax, fac = fac)
-	#totxt(rep+'Mthz_CDM.txt',[lz, lm, lxh2, lxhd],0,0,0)
-
 	#tag = 0
 	#v0 = 0.1
 	#rat = 10.
 	if tag==0:
-		d_ = Mth_z(10, 60, 51, mode = 1, v0 = v0, rat = rat, dmax = dmax, fac = fac, alpha = alpha, sk = sk, init = init1)
-		d = Mth_z(10, 60, 51, mode = 0, v0 = v0, rat = rat, dmax = dmax, fac = fac, alpha = alpha, sk = sk, init = init0)
+		d_ = Mth_z(10, 60, 51, mode = 1, v0 = v0, rat = rat, dmax = dmax, fac = fac, beta = beta, sk = sk, init = init1)
+		d = Mth_z(10, 60, 51, mode = 0, v0 = v0, rat = rat, dmax = dmax, fac = fac, beta = beta, sk = sk, init = init0)
 		totxt(rep+'Mthz_CDM_'+str(v0)+'.txt',d,0,0,0)
 		totxt(rep+'Mthz_BDMS_'+str(v0)+'.txt',d_,0,0,0)
 	lm_, lz_, lxh2_, lxhd_, lxe_, lTb_, lvr_ = np.array(retxt(rep+'Mthz_BDMS_'+str(v0)+'.txt',7,0,0))
 	lm, lz, lxh2, lxhd, lxe, lTb, lvr = np.array(retxt(rep+'Mthz_CDM_'+str(v0)+'.txt',7,0,0))
-	#lm = mth_stm(lm, lz, v0, alpha = alpha0)
+	#lm = mth_stm(lm, lz, v0, beta = beta0)
 	plt.figure()
 	plt.plot(lz, lm, label='CDM')
 	plt.plot(lz_, lm_, '--', label='BDMS')
@@ -723,6 +919,7 @@ if __name__=="__main__":
 	#plt.show()
 	"""
 	
+	# dependence of the threshold and other quantities on streaming motion velocity
 	"""
 	rep = 'Nhrat/'
 	if not os.path.exists(rep):
@@ -754,8 +951,8 @@ if __name__=="__main__":
 		for v in lv:
 			initv0 = initial(v0 = v, mode = 0)
 			initv1 = initial(v0 = v, mode = 1, Mdm = Mdm, sigma = sigma)
-			d = Mth_z(z1, z2, nz, mode = 1, v0 = v, rat = rat, dmax = dmax, fac = fac, alpha = alpha, sk = sk, init = initv1, Mdm = Mdm, sigma = sigma)
-			d_ = Mth_z(z1, z2, nz, mode = 0, rat = rat, dmax = dmax, fac = fac, v0 = v, alpha = alpha, sk = sk, init = initv0, Mdm = Mdm, sigma = sigma)
+			d = Mth_z(z1, z2, nz, mode = 1, v0 = v, rat = rat, dmax = dmax, fac = fac, beta = beta, sk = sk, init = initv1, Mdm = Mdm, sigma = sigma)
+			d_ = Mth_z(z1, z2, nz, mode = 0, rat = rat, dmax = dmax, fac = fac, v0 = v, beta = beta, sk = sk, init = initv0, Mdm = Mdm, sigma = sigma)
 			out.append(d)
 			out_.append(d_)
 		lz = d[1]
@@ -808,6 +1005,7 @@ if __name__=="__main__":
 	lxe_ = np.array(retxt(rep+'xe_v0.txt',nz,0,0))
 	lTb_ = np.array(retxt(rep+'Tb_v0.txt',nz,0,0))
 	lvr_ = np.array(retxt(rep+'vr_v0.txt',nz,0,0))
+	
 	plt.figure()
 	a = [plt.plot(lv, lm[i], label=r'$z_{vir}='+str(int(lz[i]*100)/100)+'$, BDMS', ls = lls[i]) for i in range(nz)]
 	a = [plt.plot(lv, lm_[i], label=r'$z_{vir}='+str(int(lz[i]*100)/100)+'$, CDM',color='k',ls=lls[i],lw=0.5) for i in range(nz)]
@@ -889,162 +1087,6 @@ if __name__=="__main__":
 	plt.close()
 	"""
 
-	#"""
-	tag = 0
-	m = 1e6
-	zvir = 20
-	v0 = 24
-	Mdm =  0.3 #0.001
-	sigma = 8e-20 #1e-17
-	if zi_tag==0:
-		rep0 = 'example_test0/'
-		drep = 'data0/'
-	else:
-		rep0 = 'example_test/'
-		drep = 'data_test/'
-	
-	if not os.path.exists(rep0):
-		os.makedirs(rep0)
-	#dmax = delta0 #18 * np.pi**2 * 1
-	init0 = initial(v0 = v0, mode = 0, Mdm = Mdm, sigma = sigma)
-	init1 = initial(v0 = v0, mode = 1, Mdm = Mdm, sigma = sigma)
-	if tag==0:
-		#print('!!!')
-		d0 = stored(evolve(m, zvir, mode = 0, dmax = dmax, v0 = v0, init = init0, Mdm = Mdm, sigma = sigma), m, zvir, mode = 0, v0 = v0, rep = drep, Mdm = Mdm, sigma = sigma)
-		d1 = stored(evolve(m, zvir, mode = 1, dmax = dmax, v0 = v0, init = init1, Mdm = Mdm, sigma = sigma), m, zvir, mode = 1, v0 = v0, rep = drep, Mdm = Mdm, sigma = sigma)
-	else:
-		d0 = readd(m, zvir, v0, mode = 0, rep = drep, Mdm = Mdm, sigma = sigma)
-		d1 = readd(m, zvir, v0, mode = 1, rep = drep, Mdm = Mdm, sigma = sigma)
-	
-	mgas = mmw()*PROTON
-	nIGM = [rhom(1/(1+z))*0.048/(0.315*mgas) for z in d0['z']]
-	plt.figure()
-	plt.plot(d0['t'], d0['nb'], label='Top-hat model')
-	#plt.plot(d1['t'], d1['nb'], '--', label='BDMS')
-	plt.plot(d0['t'], nIGM, '-.', label='IGM')
-	plt.xlabel(r'$t\ [\mathrm{Myr}]$')
-	plt.ylabel(r'$n\ [\mathrm{cm^{-3}}]$')
-	plt.legend()
-	plt.xscale('log')
-	plt.yscale('log')
-	plt.tight_layout()
-	plt.savefig(rep0+'Example_n_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
-	plt.close()
 
-	plt.figure()
-	plt.plot(d0['t'], d0['Tb'], label=r'$T_{b}$, CDM')
-	plt.plot(d1['t'], d1['Tb'], '--', label=r'$T_{b}$, BDMS')
-	#plt.plot(d0['t'], d0['Tdm'], '-.', label=r'$T_{\chi}$, CDM')
-	plt.plot(d1['t'], d1['Tdm'], '-.', label=r'$T_{\chi}$, BDMS')
-	plt.plot(d1['t'], (d1['z']+1)*2.726, ':', label=r'$T_{cmb}$')
-	plt.plot(d1['t'], T_b(d1['z']), 'k-', label=r'$T_{b}(\mathrm{IGM})$, CDM', lw=0.5)
-	plt.xlabel(r'$t\ [\mathrm{Myr}]$')
-	plt.ylabel(r'$T\ [\mathrm{K}]$')
-	plt.legend()
-	plt.xscale('log')
-	plt.yscale('log')
-	#plt.xlim(np.min(d0['t']), np.max(d0['t']))
-	#plt.ylim(1, 3e3)
-	plt.tight_layout()
-	plt.savefig(rep0+'Example_T_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
-	plt.close()
-
-	plt.figure()
-	plt.plot(d0['t'], d0['X'][3], label='CDM')
-	plt.plot(d1['t'], d1['X'][3], '--', label='BDMS')
-	plt.xlabel(r'$t\ [\mathrm{Myr}]$')
-	plt.ylabel(r'$x_{\mathrm{H_{2}}}$')
-	plt.legend()
-	plt.xscale('log')
-	plt.yscale('log')
-	plt.ylim(1e-8, np.max(d0['X'][3])*1.5)
-	plt.tight_layout()
-	plt.savefig(rep0+'Example_xH2_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
-	plt.close()
-
-	plt.figure()
-	plt.plot(d0['t'], d0['X'][5], label='CDM')
-	plt.plot(d1['t'], d1['X'][5], '--', label='BDMS')
-	plt.xlabel(r'$t\ [\mathrm{Myr}]$')
-	plt.ylabel(r'$x_{\mathrm{e}}$')
-	plt.legend()
-	plt.xscale('log')
-	plt.yscale('log')
-	#plt.ylim(1e-5, 1e-3)
-	plt.tight_layout()
-	plt.savefig(rep0+'Example_xe_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
-	plt.close()
-
-	plt.figure()
-	#plt.plot(d0['t'], d0['X'][0], label='0')
-	plt.plot(d1['z'], d1['X'][3], label='3')
-	plt.plot(d1['z'], d1['X'][5], label='5')
-	#plt.plot(d0['t'], d0['X'][9], label='9')
-	plt.plot(d1['z'], d1['X'][10], label='10')
-	plt.plot(d1['z'], d1['X'][11], label='11')
-	plt.plot(d1['z'], d1['X'][2], label='2')
-	plt.plot(d1['z'], d1['X'][4], label='4')
-	#plt.plot(d1['t'], d1['X'][5], '--', label='BDMS')
-	#plt.xlabel(r'$t\ [\mathrm{Myr}]$')
-	plt.xlabel(r'$z$')
-	plt.ylabel(r'$x$')
-	plt.legend()
-	plt.xscale('log')
-	plt.yscale('log')
-	#plt.ylim(1e-5, 1e-3)
-	plt.tight_layout()
-	plt.savefig(rep0+'Example_X_z_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
-	plt.close()
-	#plt.show()
-
-	vIGM = [vbdm_z(z, v0)/1e5 for z in d0['z']]
-	plt.figure()
-	plt.plot(d0['t'], d0['v']/1e5, label='CDM')
-	plt.plot(d1['t'], d1['v']/1e5, '--', label='BDMS')
-	plt.plot(d0['t'], vIGM, '-.', label='IGM')
-	plt.xlabel(r'$t\ [\mathrm{Myr}]$')
-	plt.ylabel(r'$v_{b\chi}\ [\mathrm{km\ s^{-1}}]$')
-	plt.legend()
-	plt.ylim(np.min(vIGM)/10, np.max(vIGM)*10)
-	plt.xscale('log')
-	plt.yscale('log')
-	plt.tight_layout()
-	plt.savefig(rep0+'Example_vbDM_t_m6_'+str(m/1e6)+'_z_'+str(zvir)+'_v0_'+str(v0)+'.pdf')
-	plt.close()
-	#"""
-
-	"""
-	tag = 0
-	zvir = 50
-	lm = 10**np.linspace(4,8,10)
-	if tag==0:
-		ld0 = [stored(evolve(m, zvir), m, zvir) for m in lm]
-		#a = [stored(d, m, zvir) for d, m in zip(ld0, lm)]
-	else:
-		ld0 = [readd(m, zvir) for m in lm]
-	lrat = np.array([d['rat'] for d in ld0])
-	lrat0 = np.array([d['rat0'] for d in ld0])
-	lrat1 = np.array([d['rat1'] for d in ld0])
-	lrat2 = np.array([d['rat2'] for d in ld0])
-	
-	plt.figure()
-	plt.plot(lm, lrat/lrat0, label=r'$(T_{f}/T_{V})/(\Delta t/t_{f})$')
-	plt.plot(lm, lrat1/lrat0, '--', label=r'$(T(z_{V})/T_{V})/(\Delta t/t_{f})$')
-	plt.plot(lm, lrat2, '-.', label=r'$t_{\mathrm{cool}}/t_{\mathrm{ff}}$')
-	plt.plot(lm, np.ones(len(lm)), 'k:')
-	plt.legend()
-	plt.xlim(np.min(lm), np.max(lm))
-	plt.ylim(1e-2, 1e2)
-	plt.xscale('log')
-	plt.yscale('log')
-	plt.xlabel(r'$M\ [M_{\odot}]$')
-	plt.ylabel('Ratio')
-	plt.tight_layout()
-	plt.savefig('Ratio_z'+str(zvir)+'.pdf')
-	#plt.show()
-
-	mth = [d['m'] for d in ld0]
-	print(mth)
-	"""
 
 

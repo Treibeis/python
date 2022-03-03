@@ -29,9 +29,10 @@ Rsun = 6.96342e10
 H00 = 1e7/MPC
 
 # Primordial abundances
-Hfrac = 0.76
+Hfrac = 0.75
 XeH = 0.0
 XeHe = 0.0
+# mean molecular weight, xeH/xeHe: hydrogen/helium ionization fraction
 def mmw(xeH = XeH, xeHe = XeHe, X = Hfrac):
 	xh = 4*X/(1+3*X)
 	return 4.0/(1.0+3*X)/(xh*(1+xeH)+(1-xh)*(1+xeHe))
@@ -40,7 +41,7 @@ def mmw(xeH = XeH, xeHe = XeHe, X = Hfrac):
 UL = 3.085678e21
 #UL = 1.0
 UM = 1.989e43
-Msun = UM/1e10
+Msun = 1.989e33
 #UM = 1.0
 UV = 1.0e5
 #UV = 1.0
@@ -58,6 +59,7 @@ def midbin(l):
 def sumy(l):
 	return np.array([np.min(l), np.max(l), np.average(l), np.median(l)])
 
+# black-body spectrum
 def BB_spectrum(nu0, T):
   numax = 50.*BOL*T/PLANCK
   nu = nu0 * (nu0<numax) + numax * (nu0>=numax)
@@ -69,6 +71,7 @@ def H(a, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 	H = H0*(Om/a**3+(1-Om-OR)+OR/a**4)**0.5
 	return H
 
+# co-moving distance
 def DZ(z, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 	def integrand(a):
 		return SPEEDOFLIGHT/(a**2)/H(a, Om, h, OR)
@@ -78,6 +81,7 @@ def DZ(z, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 def dt_da(a, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 	return 1/a/H(a, Om, h, OR)
 
+# cosmic age
 def TZ0(z, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
 	I = quad(dt_da, 0, 1/(1+z), args = (Om, h, OR), epsrel = 1e-8)
 	return I[0]
@@ -87,17 +91,26 @@ lz0 = np.hstack([[0],10**np.linspace(-2, 4, 1000)])
 lt0 = np.array([np.log10(TZ0(x)/1e9/YR) for x in lz0])
 ld0 = [DZ(x)/UL/1e3 for x in lz0]
 
+# interpolation functions for the relation between t, d and z
 TZint = interp1d(np.log10(1/(1+lz0)), lt0)
 TZ = lambda z: 10**TZint(np.log10(1/(1+z)))*1e9*YR
-#TZ = lambda z: TZ0(z)
-ZT = interp1d(lt0, lz0)
+ZTint = interp1d(lt0, lz0)
+ZT = lambda x: ZTint(np.log10(x/1e9/YR))
 ZD = interp1d(ld0, lz0)
 
+# matter density
 def rhom(a, Om = 0.3089, h = 0.6774):
 	H0 = h*100*UV/UL/1e3
 	rho0 = Om*H0**2*3/8/np.pi/GRA
 	return rho0/a**3
 
+# gas temperature [K] in the standard CDM cosmology
+# fit from https://journals.aps.org/prd/abstract/10.1103/PhysRevD.82.083520
+def T_b(z, a1=1./119, a2=1./115, T0=2.726):
+	a = 1./(1+z)
+	return T0/(a*(1+a/(a1*(1+(a2/a)**1.5))))
+
+# I think this is another version of T_b...
 def T_cosmic(z, alpha = -4, beta = 1.27, z0 = 189.6, zi = 1020, T0 = 2.726*1021):
 	def integrand(logt):
 		return alpha/3.0-(2+alpha)/3.0*(1-np.exp(-(ZT(logt)/z0)**beta))
@@ -105,18 +118,17 @@ def T_cosmic(z, alpha = -4, beta = 1.27, z0 = 189.6, zi = 1020, T0 = 2.726*1021)
 	temp = T0*10**I
 	return temp
 
-def T_b(z, a1=1./119, a2=1./115, T0=2.726):
-	a = 1./(1+z)
-	return T0/(a*(1+a/(a1*(1+(a2/a)**1.5))))
-
+# DM temperature, m: DM particle mass in eV
 def T_dm(z, m = 1., T0=2.726):
 	zc = m*1e9*eV / ((3./2)*BOL*T0) - 1
 	Tc = T0*(1+zc)
 	return T0*(1+z) * (z>zc) + Tc*((1+z)/(1+zc))**2 * (z<=zc)
 
-# DM haloes
+# DM haloes, halo mass is always in Msun
+
+# NFW halo concentration
+# fit from Dutton & Macci¨° 2014, for z = 0-5, logMvir = 10-15
 def concentration_z(z, m, h=0.6774):
-	# Dutton & Macci¨° 2014, for z = 0-5, logMvir = 10-15
 	a = 0.52 + (0.905-0.52)*np.exp(-0.617*z**1.21) # M200-c200
 	# a = 0.537 + (1.025-0.537)*np.exp(-0.718*z**1.08) # Mvir-cvir
 	b = -0.101 + 0.026*z
@@ -124,42 +136,51 @@ def concentration_z(z, m, h=0.6774):
 	logc = a + b*np.log10(m*h/1e12)
 	return 10**logc
 
-def tff(z = 10.0, delta = 200):
-	return (3*np.pi/(32*GRA*delta*rhom(1/(1+z))))**0.5
+# free-fall timescale for a halo of overdensity delta, at redshift z
+def tff(z = 10.0, delta = 200, Om=0.3089, h=0.6774):
+	return (3*np.pi/(32*GRA*delta*rhom(1/(1+z),Om,h)))**0.5
 
-def RV(m = 1e10, z = 10.0, delta = 200):
-	M = m*UM/1e10
-	return (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
+# virial radius
+def RV(m = 1e10, z = 10.0, delta = 200, Om=0.3089, h=0.6774):
+	M = m*Msun
+	return (M/(rhom(1/(1+z),Om,h)*delta)*3/4/np.pi)**(1/3)
 
-def Vcir(m = 1e10, z = 10.0, delta = 200):
-	M = m*UM/1e10
-	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
+# circular velovity
+def Vcir(m = 1e10, z = 10.0, delta = 200, Om=0.3089, h=0.6774):
+	M = m*Msun
+	Rvir = (M/(rhom(1/(1+z),Om,h)*delta)*3/4/np.pi)**(1/3)
 	return (GRA*M/Rvir)**0.5
 
-def M_vcir(z, v, delta = 200):
-	M = v**3 / GRA**1.5 /(4*np.pi*rhom(1/(1+z))*delta/3)**0.5
-	return M*1e10/UM
+# halo mass for a given circular velocity
+def M_vcir(z, v, delta = 200, Om=0.3089, h=0.6774):
+	M = v**3 / GRA**1.5 /(4*np.pi*rhom(1/(1+z),Om,h)*delta/3)**0.5
+	return M/Msun
 
-def Lvir(m = 1e10, z = 10.0, delta = 200):
-	M = m*UM/1e10
-	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
-	return 3*GRA*M**2/Rvir/tff(z, delta)/5
+# energy loss rate in virialization
+def Lvir(m = 1e10, z = 10.0, delta = 200, Om=0.3089, h=0.6774):
+	M = m*Msun
+	Rvir = (M/(rhom(1/(1+z),Om,h)*delta)*3/4/np.pi)**(1/3)
+	return 3*GRA*M**2/Rvir/tff(z, delta,Om,h)/5
 
-def Tvir(m = 1e10, z = 10.0, delta = 200, xeH=0):
-	M = m*UM/1e10
-	Rvir = (M/(rhom(1/(1+z))*delta)*3/4/np.pi)**(1/3)
+# virial temperature
+def Tvir(m = 1e10, z = 10.0, delta = 200, xeH=0, Om=0.3089, h=0.6774):
+	M = m*Msun
+	Rvir = (M/(rhom(1/(1+z),Om,h)*delta)*3/4/np.pi)**(1/3)
 	return GRA*M*mmw(xeH)*PROTON/Rvir/(2*BOL) # *3/5
 	
-def M_Tvir(T, z = 10.0, delta = 200, xe=0):
-	y = 2*T*BOL*(3/(4*np.pi*delta*rhom(1/(1+z))))**(1/3)/GRA/(mmw(xe)*PROTON)
-	return y**1.5
-	
+# halo mass for a given virial temperature
+def M_Tvir(T, z = 10.0, delta = 200, xe=0, Om=0.3089, h=0.6774):
+	y = 2*T*BOL*(3/(4*np.pi*delta*rhom(1/(1+z),Om,h)))**(1/3)/GRA/(mmw(xe)*PROTON)
+	return y**1.5/Msun
+
+# Jeans mass
 def Jeansm(T, rho, mu = 0.63, gamma=5./3):
 	cs = (gamma*T*BOL/(mu*PROTON))**0.5
 	MJ = np.pi/6 * cs**3/(GRA**3*rho)**0.5
 	return MJ/Msun
 	
-def Mreion(z, delta=200, T=2e4):#, Ob=0.048, Om=0.3089):
-	rho = rhom(1/(1+z)) * delta
+# halo mass threshold of star formation in the post-reionization epoch
+def Mreion(z, delta=200, T=2e4, Om=0.3089, h=0.6774):#, Ob=0.048, Om=0.3089):
+	rho = rhom(1/(1+z),Om,h) * delta
 	MJ = Jeansm(T, rho)
 	return MJ
