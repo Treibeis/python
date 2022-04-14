@@ -190,7 +190,7 @@ def rates(J_21, T, nh, nh2, z, T0, fnth):
 	return k
 
 # evolve abundances with the implicit Euler method
-def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 5, T0 = 2.726, nmax = 100, Tcut=300, fnth=0):
+def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 5, T0 = 2.726, nmax = 100, Tcut=1000, fnth=0):
 	"""
 		T: temperature
 		nin: input number densities
@@ -231,11 +231,11 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 
 		Ds[5]=k[3]*ny[1]+k[4]*ny[7]+k[5]*ny[8]
 		ny[5]=(ny[5]+Cr[5]*dt)/(1.e0+Ds[5]*dt)
 
-		Cr[0]=k[3]*ny[1]*ny[5] + k[48]*ny[2] + k[49]*ny[4] + 2*k[50]*ny[4];
+		Cr[0]=k[3]*ny[1]*ny[5] #+ k[48]*ny[2] + k[49]*ny[4] + 2*k[50]*ny[4];
 		Ds[0]=k[0]*ny[5]+k[21]+k[47];
 		ny[0]=(ny[0]+Cr[0]*dt)/(1.e0+Ds[0]*dt);
 
-		Cr[1]=k[0]*ny[5]*ny[0] + (k[21]+k[47])*ny[0] + k[49]*ny[4];
+		Cr[1]=k[0]*ny[5]*ny[0] + (k[21]+k[47])*ny[0]# + k[49]*ny[4];
 		Ds[1]=k[3]*ny[5];
 		ny[1]=(ny[1]+Cr[1]*dt)/(1.e0+Ds[1]*dt);
 
@@ -265,7 +265,7 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, z = 
 			ny[2] = (ny[2]+Cr[2]*dt)/(1.e0+Ds[2]*dt);
 #/**** calculate equilibrium abundance for H2+ ********************/
 		XNUM2=(k[6]*ny[0] + k[16]*ny[3]+k[20]*ny[2])*ny[1] + k[26]*ny[3] +k[51]*ny[3];
-		XDENOM2=k[7]*ny[0]+k[10]*ny[5] + k[49] + k[50] +k[11]*ny[2]+k[25];
+		XDENOM2=k[7]*ny[0]+k[10]*ny[5]+k[11]*ny[2]+k[25] + k[49] + k[50];
 		if T0*(1+z)<Tcut:
 			if XDENOM2>1e-52:
 				ny[4]=XNUM2/XDENOM2

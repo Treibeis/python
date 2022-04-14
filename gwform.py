@@ -3,6 +3,8 @@ from txt import *
 import matplotlib
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
+plt.style.use('test2')
+plt.style.use('tableau-colorblind10')
 
 gammaE = np.euler_gamma
 
@@ -206,6 +208,12 @@ def agw3b(M1, M2, sig, rho, e, H=17.5):
 	agw = (B/A)**(1/5) 
 	return agw
 	
+def fGW_e(e, M, a0, e0):
+	forb = 0.5*(GRA*M*Msun/a0**3)**0.5/np.pi
+	c0 = e0**(12/19)*(1+121*e0**2/304)**(1305./2299)/(1-e0**2)
+	return 2*forb*(1-e**2)**1.5/e**(18/19)*(1+121*e**2/304)**(-1305./2299)*c0**1.5
+	
+# Wen 2003, https://ui.adsabs.harvard.edu/abs/2003ApJ...598..419W/abstract
 def fGW_wen03(M, a, e, fint=0):
 	forb = 0.5*(GRA*M*Msun/a**3)**0.5/np.pi
 	npeak = 2*(1+e)**1.1954/(1-e**2)**1.5
@@ -213,6 +221,7 @@ def fGW_wen03(M, a, e, fint=0):
 		npeak = np.round(npeak+0.001)
 	return forb*npeak
 
+# Hamers 2021, https://ui.adsabs.harvard.edu/abs/2021RNAAS...5..275H/abstract
 ck0 = [-1.01678, 5.57372, -4.9271, 1.68506]
 def fGW(M, a, e, fint=0, ck=ck0):
 	forb = 0.5*(GRA*M*Msun/a**3)**0.5/np.pi
@@ -270,7 +279,9 @@ if __name__=="__main__":
 	le_ = le[sel]
 	e1, e2 = np.min(le_), np.max(le_)
 	plt.subplot(222)
+	lfGW_ = fGW_e(le, M1+M2, a0, e0)
 	plt.loglog(le, lfGW)
+	plt.loglog(le, lfGW_, '--')
 	plt.fill_between([e1, e2], [f1, f1], [f2, f2], 
 		facecolor='gray', alpha=0.5, label=r'$a\sim 10M-500M$')
 	#plt.legend()
@@ -287,10 +298,11 @@ if __name__=="__main__":
 	plt.xlim(0, a0/PC)
 	plt.tight_layout()
 	plt.subplot(224)
-	plt.plot(le[1:], ltcol/YR)
+	plt.plot(1-le[1:], ltcol/YR)
 	#plt.legend()
-	plt.xlabel(r'$e$')
+	plt.xlabel(r'$1-e$')
 	plt.yscale('log')
+	plt.xscale('log')
 	#plt.ylabel(r'$f_{\mathrm{GW}}\ [\mathrm{Hz}]$')
 	#plt.ylim(f1, f2)
 	#plt.xlim(ef, 1)
@@ -298,6 +310,8 @@ if __name__=="__main__":
 	plt.tight_layout()
 	plt.savefig('fGW_tcol_a_e.pdf')
 	plt.close()
+
+	exit()
 
 	cr = 'comp/'
 	M1, M2 = 1.4e5, 3e4

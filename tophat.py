@@ -103,22 +103,25 @@ zi_tag = 2 # 0: zi=300, 1: zi=800, 2: zi=1000
 # while those of the other species are defined with respect to H nuclei 
 # the effect of Li is negligible and by default the Li network is turned off 
 if zi_tag==0:
+	xi = 2e-4
 	z0_default = 300
-	x0_default = [1., 5e-4, 2.5e-19, 2e-11, 3e-16] + \
-			 [5e-4, 1.0, 4.7e-19, 0.0] + \
-			 [1.0, 5e-4, 8.4e-11] + \
+	x0_default = [1.-xi, xi, 2e-19, 5e-8, 0.9e-12] + \
+			 [xi, 1.0, 1.4e-20, 0.0] + \
+			 [1.0-xi, xi, 8.4e-11] + \
 			 [1.0, 1e-4, 0, 0, 1e-14]
 elif zi_tag==1:
+	xi = 5.6e-4
 	z0_default = 800
-	x0_default = [1., 2e-3, 1.6e-20, 1.3e-12, 4e-18] + \
-			 [2e-3, 1.0, 4.7e-16, 0.0] + \
-			 [1.0, 2e-3, 3.4e-12] + \
+	x0_default = [1.-xi, xi, 0.3e-20, 1.3e-12, 0.35e-18] + \
+			 [xi, 1.0, 4.7e-16, 0.0] + \
+			 [1.0-xi, xi, 3.4e-12] + \
 			 [1.0, 2.2e-9, 0, 0, 0]
 else:
+	xi = 1.6e-3
 	z0_default = 1000
-	x0_default = [.9, 1e-1, 1.5e-19, 1.2e-13, 7.6e-18] +\
-			 [1e-1, 1.0, 9e-15, 0.0]+ \
-			 [0.9, 1e-1, 3.4e-13] + \
+	x0_default = [1.0-xi, xi, 7e-21, 1.2e-13, 1.5e-19] +\
+			 [xi, 1.0, 9e-15, 0.0]+ \
+			 [1-xi, xi, 3.4e-13] + \
 			 [1.0, 1e-10, 0, 0, 0]
 
 # set the initial condition
@@ -181,10 +184,12 @@ def coolt(Tb_old, Tdm_old, v_old, nb, nold, rhob_old, rhodm_old, z, mode, Mdm, s
 	else:
 		return -Tb_old/dTb_dt
 
+dboost = 1.0
+
 # main function that follows the thermal and chemical evolution of a "cloud"
 # mode=0: CDM, mode=1: include BDMS
 #hat=0: IGM (no collapse), hat=1: tophat model for halo collapse
-def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, Mdm = 0.3, sigma = 8e-20, num = int(1e3), epsT = 1e-3, epsH = 1e-2, dmax = 18*np.pi**2, gamma = 5/3, X = 0.75, D = 2.38e-5, Li = 4.04e-10, T0 = 2.726, Om = 0.3089, Ob = 0.048, h = 0.6774, dtmin = YR, J_21=0.0, Tmin = 1., vmin = 0.0, nmax = int(1e6), init =init, hat=1, fnth=0.17):
+def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, Mdm = 0.3, sigma = 8e-20, num = int(1e3), epsT = 1e-3, epsH = 1e-2, dmax = 18*np.pi**2, gamma = 5/3, X = 0.75, D = 2.38e-5, Li = 4.04e-10, T0 = 2.726, Om = 0.3089, Ob = 0.048, h = 0.6774, dtmin = YR, J_21=0.0, Tmin = 1., vmin = 0.0, nmax = int(1e6), init =init, hat=1, fnth=0.1):
 	"""
 		Mh, zcir: halo mass and redshift
 		tpost: duration of the run after virialization in unit of 1/H(a)
@@ -213,8 +218,8 @@ def evolve(Mh = 1e6, zvir = 20, z0 = z0_default, v0 = 30, mode = 0, fac = 1.0, M
 		rhodm_z = lambda x: rho_z(x, zvir, dmax, Om, h)*(Om-Ob)/Om
 		rhob_z = lambda x: rho_z(x, zvir, dmax, Om, h)*Ob/Om
 	else:
-		rhodm_z = lambda x: rhom(1/(1+x), Om, h)*(Om-Ob)/Om
-		rhob_z = lambda x: rhom(1/(1+x), Om, h)*Ob/Om
+		rhodm_z = lambda x: rhom(1/(1+x), Om, h)*(Om-Ob)/Om * dboost
+		rhob_z = lambda x: rhom(1/(1+x), Om, h)*Ob/Om * dboost
 	Ns = len(init['X'])
 	lz = [z0]
 	lt = [t0]

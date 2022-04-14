@@ -8,7 +8,8 @@ import matplotlib
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 from txt import *
-#plt.style.use('test2')
+plt.style.use('test2')
+plt.style.use('tableau-colorblind10')
 
 def popIII_IMF(m, Mcut = 20, alpha=0.17):
 	return m**-alpha * np.exp(-Mcut/m**2)
@@ -47,6 +48,7 @@ def SP_info(m1 = 1, m2 = 150, imf = popIII_IMF, mcut=mcut3, nb = 10000, mode=1):
 	#plt.show()
 	return d
 
+"""
 spinfo = SP_info()
 print('PopIII N/M = {} /(600 Msun)'.format(600*spinfo['N/M']))
 print('PopIII N_CCSN = {} /(600 Msun)'.format(600*spinfo['N/M']*spinfo['num'][1]))
@@ -85,6 +87,7 @@ plt.ylim(y1, y2)
 plt.tight_layout()
 plt.savefig('imf_comp.pdf')
 plt.close()
+"""
 
 def wind(beta=0.16, chi=0.05, eta=2.0, Tsn=3e8, mu=1.22, gamma=5./3):
 	usn = BOL*Tsn/(PROTON*mu*(gamma-1))
@@ -100,6 +103,7 @@ def tacc_m(mbh, ms=1):
 	t = np.log((mbh+ms)/mbh)*t0
 	return t
 
+"""
 ms = 1
 t0 = 1/Macc_edd(1.0)
 lm = np.linspace(1, 100, 500)	
@@ -113,6 +117,7 @@ plt.title(r'$t_{\rm Edd}\simeq'+'{:.0f}'.format(t0/1e6)+r'\ \rm Myr$, $\Delta m=
 plt.tight_layout()
 plt.savefig('tacc_m.pdf')
 plt.close()
+"""
 
 def LBH(Mdot, eps = 0.1):
 	return Mdot * Msun/YR * SPEEDOFLIGHT**2 * eps
@@ -264,6 +269,7 @@ def time_isobhb(a0, M1, M2, e0 = 0):
 		t *= integrate.quad(eint, 0, e0)[0]
 		return t / YR
 
+# Mandel 2021, https://ui.adsabs.harvard.edu/abs/2021RNAAS...5..223M/abstract
 def time_isobhb_fit(a0, M1, M2, e0=0):
 	T0 = time_isobhb_circ(a0, M1, M2, 0)
 	if 1-e0>1e-5:

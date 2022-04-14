@@ -29,7 +29,7 @@ Rsun = 6.96342e10
 H00 = 1e7/MPC
 
 # Primordial abundances
-Hfrac = 0.75
+Hfrac = 0.76
 XeH = 0.0
 XeHe = 0.0
 # mean molecular weight, xeH/xeHe: hydrogen/helium ionization fraction
