@@ -208,6 +208,7 @@ def agw3b(M1, M2, sig, rho, e, H=17.5):
 	agw = (B/A)**(1/5) 
 	return agw
 	
+# Peters & Mathews 1963, https://ui.adsabs.harvard.edu/abs/1963PhRv..131..435P/abstract
 def fGW_e(e, M, a0, e0):
 	forb = 0.5*(GRA*M*Msun/a0**3)**0.5/np.pi
 	c0 = e0**(12/19)*(1+121*e0**2/304)**(1305./2299)/(1-e0**2)
