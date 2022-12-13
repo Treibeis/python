@@ -1,0 +1,14 @@
+output_*/*.dat
+fin_states/*.dat
+output_*/*.pdf
+output_*/*.png
+*.o
+*.mod
+*.smod
+*.exe
+*~
+output_*
+output_*/*
+*.pyc
+__pycache__
+__pycache__/*

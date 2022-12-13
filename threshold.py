@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
+#plt.style.use('test2')
 
 def MJeans(T, n, mu=1.22, gamma=5./3):
 	cs = (gamma*BOL*T/(mu*PROTON))**0.5
@@ -17,6 +18,10 @@ def T_n_MJ(n, M, mu=1.22, gamma=5./3):
 	cs = (M*Msun/A)**(1/3)
 	T = cs**2*mu*PROTON/gamma/BOL
 	return T
+
+def T_b(z, a1=1./119, a2=1./115, T0=2.726):
+	a = 1./(1+z)
+	return T0/(a*(1+a/(a1*(1+(a2/a)**1.5))))
 
 tFF = lambda rho: (3.*np.pi/(32.*GRA*rho))**0.5
 Zsun = 0.014
@@ -73,24 +78,24 @@ rep = './'#'OZmodels/'
 lab = 'demo'
 #Ti = 2e4
 #Ti = 7e3
-Ti = 1e2
 #ni = 5e2
 #ni = 1e2
-ni = 0.01
+z = 10.0
+ni = n0(z) #0.01
+Ti = 200 #T_b(z)
 boost = 1.0
-z = 0.0
 Zth = 1e-5 #* Zsun
 xh2_crit = 1#1e-7
 xh2 = 1e-10
-J_21 = 2e4
+J_21 = 1e4
 evo0 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=0.0, boost=boost, H2_flag=xh2_crit, J_21 = 0.0, Li=0)#, D=0)
-evo1 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=Zth*10, boost=boost, H2_flag=xh2_crit, J_21 = J_21, Li=0)#, D=0)
+evo1 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=Zth*30, boost=boost, H2_flag=xh2_crit, J_21 = J_21, Li=0)#, D=0)
 evo2 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=0, boost=boost, H2_flag=xh2_crit, J_21 = J_21, Li=0)#, D=0)
 evo3 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=Zth, boost=boost, H2_flag=xh2_crit, J_21 = 0.0, Li=0)#, D=0)
 evo4 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=Zth*1e1, boost=boost, H2_flag=xh2_crit, J_21 = 0.0, Li=0)#, D=0)
 evo5 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=Zth*1e2, boost=boost, H2_flag=xh2_crit, J_21 = 0.0, Li=0)#, D=0)
 evo6 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=Zth*1e3, boost=boost, H2_flag=xh2_crit, J_21 = 0.0, Li=0)#, D=0)
-evo7 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=0, boost=boost, H2_flag=xh2_crit, J_21 = 100, Li=0)#, D=0)
+evo7 = main1(Ti, ni/0.93, xh2, xe, z=z, mode=1, Z=0, boost=boost, H2_flag=xh2_crit, J_21 = 1000, Li=0)#, D=0)
 		
 x1, x2 = ni, 1e15#1e10
 y1, y2 = 10, 3e5 #7e2, 2e4
@@ -102,12 +107,12 @@ plt.loglog(evo3['n']*0.93, evo3['T'], '-.', label=r'$J_{21}=0$, $Z=10^{-5}\ \mat
 plt.loglog(evo4['n']*0.93, evo4['T'], ':', label=r'$J_{21}=0$, $Z=10^{-4}\ \mathrm{Z}_{\odot}$')
 plt.loglog(evo5['n']*0.93, evo5['T'], ls=(0, (10, 5)), label=r'$J_{21}=0$, $Z=10^{-3}\ \mathrm{Z}_{\odot}$')
 plt.loglog(evo6['n']*0.93, evo6['T'], ls=(0, (2,1)), label=r'$J_{21}=0$, $Z=10^{-2}\ \mathrm{Z}_{\odot}$')
-plt.loglog(evo1['n']*0.93, evo1['T'], '--', label=r'$J_{21}=2\times 10^{4}$, $Z=1\times 10^{-4}\ \mathrm{Z}_{\odot}$')
-plt.loglog(evo7['n']*0.93, evo7['T'], ls=(0, (5,1,1,1,1,1)), label=r'$J_{21}=100$, $Z=0$', color='brown')
-plt.loglog(evo2['n']*0.93, evo2['T'], '-', label=r'$J_{21}=2\times 10^{4}$, $Z=0$', color='r')
+plt.loglog(evo1['n']*0.93, evo1['T'], '--', label=r'$J_{21}=10^{4}$, $Z=3\times 10^{-4}\ \mathrm{Z}_{\odot}$')
+plt.loglog(evo7['n']*0.93, evo7['T'], ls=(0, (5,1,1,1,1,1)), label=r'$J_{21}=1000$, $Z=0$', color='brown')
+plt.loglog(evo2['n']*0.93, evo2['T'], '-', label=r'$J_{21}=10^{4}$, $Z=0$', color='r')
 plt.plot(lnx, T_n_MJ(lnx, 0.1), 'k--', color='gray', alpha=0.5, lw=3) #, label=r'$M_{\rm J}=0.1-10^4\ \rm M_{\odot}$')
 [plt.plot(lnx, T_n_MJ(lnx, 10**(i)), 'k--', color='gray', alpha=0.5, lw=3) for i in range(6)]
-plt.text(9e9, 15, r'$M_{\rm J}=0.1-10^{5}\ \rm M_{\odot}$')
+plt.text(9e9, 15, r'$M_{\rm J}=0.1-10^{5}\ \rm M_{\odot}$', size=14)
 #for i in range(7):
 #	if i%2==0:
 #		plt.text(10*10**(i*2), 1.5e3, '$10^{'+str(5-i)+r'}\rm\ M_{\odot}$', color='gray')
@@ -115,9 +120,11 @@ plt.text(9e9, 15, r'$M_{\rm J}=0.1-10^{5}\ \rm M_{\odot}$')
 #plt.fill_between([x1, x2], [T1, T1], [T2, T2], facecolor='k', alpha=0.3)#, label=r'$T(\mathrm{DCBH})$')
 #plt.plot([x1, x2], [T0, T0], 'k--', lw=0.5)#, label=r'$T_{\mathrm{SF}}$')
 #plt.plot([n, n], [y1, y2], 'k-', lw=0.5)#, label=r'$n_{\mathrm{th}}(\mathrm{DCBH})$')
-plt.xlabel(r'$n\ [\mathrm{cm^{-3}}]$')
-plt.ylabel(r'$T\ [\mathrm{K}]$')
-plt.legend(loc=1,ncol=2)
+plt.xlabel(r'$n\ [\mathrm{cm^{-3}}]$', size=14)
+plt.ylabel(r'$T\ [\mathrm{K}]$', size=14)
+plt.xticks(fontsize= 14)
+plt.yticks(fontsize= 14)
+plt.legend(loc=1,ncol=2, fontsize=12)
 plt.xlim(x1, x2)
 plt.ylim(y1, y2)
 plt.tight_layout()

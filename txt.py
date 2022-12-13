@@ -9,7 +9,7 @@ formatter.set_powerlimits((-1,1))
 
 #plt.style.use('test2')
 
-# read data to file as rows of strings separated by ' '
+# read data from file as rows of strings separated by ' '
 # s: file name, k: num. of head rows to skip
 def restr(s, k = 0):
 	out = []
@@ -24,7 +24,7 @@ def restr(s, k = 0):
 			j = j+1
 	return out
 
-# read data to file as rows of floats...
+# read data from file as rows of floats...
 def refloat(s, k = 0):
 	out = []
 	j = 0
@@ -59,6 +59,7 @@ def retxt(s, n, k = 0, t = 0):
 			out[i].reverse()
 	out[i] = np.array(out[i])
 	return out
+	
 # similar to retxt but skip the rows in which the column defined by ind 
 # is not in ascending order, pre0 sets the minimum of this column
 def retxt_nor(s, n, k = 1, t = 1, ind = 0, pre0 = 0):

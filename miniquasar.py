@@ -254,6 +254,20 @@ def time_isobhb_circ(a0, M1, M2, e0 = 0):
 	B = 64*GRA**3*m1m2*m*Fe/(5*SPEEDOFLIGHT**5)
 	return a0**4/(4*B)/YR
 
+# Zwick 2020, https://academic.oup.com/mnras/article/495/2/2321/5841291
+def time_isobhb_sevn(a0, M1, M2, e0=0):
+	tpeters = time_isobhb_circ(a0, M1, M2, e0)
+	m = (M1 + M2)*Msun
+	m1m2 = M1 * M2 * Msun**2
+	e = e0
+	Fe = (1-e**2)**(-3.5)#*(1+(73./24)*e**2+(37./96)*e**4)
+	B = 64*GRA**3*m1m2*m*Fe/(5*SPEEDOFLIGHT**5)
+	tgw = a0**4/(4*B)/YR
+	fcorr = e**2*(-0.443+0.58*(1-e**3.074)**(1.105-0.807*e+0.193*e**2))
+	y0 = tpeters*8**(1-(1-e)**0.5)
+	y1 = tgw/(1+fcorr)
+	return y1*(e<0.999) + y0*(e>=0.999)
+
 def eint(e):
 	return e**(29/19)*(1+(121/304)*e**2)**(1181/2299)/(1-e**2)**(3/2)
 
@@ -625,6 +639,7 @@ if __name__ == "__main__":
 	lt0 = time_isobhb_circ(1, 1, 1, le)
 	lt1 = np.array([time_isobhb(1, 1, 1, e) for e in le])
 	lt2 = np.array([time_isobhb_fit(1, 1, 1, e) for e in le])
+	lt3 = np.array([time_isobhb_sevn(1, 1, 1, e) for e in le])
 	rat3 = (1-0.8*le)
 	xf = 0
 	if xf>0:
@@ -633,8 +648,9 @@ if __name__ == "__main__":
 		lx = le
 	plt.figure()
 	plt.plot(lx, lt0/lt1, label='Integration')
-	plt.plot(lx, lt0/lt2, '--', label='Fit')
-	plt.plot(lx, rat3, '-.', label='Approximation')
+	plt.plot(lx, lt0/lt2, '--', label='Mandel+2021')
+	plt.plot(lx, lt0/lt3, '-.', label='Zwick+2020')
+	#plt.plot(lx, rat3, ':', label='Approximation')
 	if xf>0:
 		plt.xlabel(r'$1-e_{0}$')
 		plt.xlim(x1, x2)
@@ -648,6 +664,8 @@ if __name__ == "__main__":
 	plt.tight_layout()
 	plt.savefig('rat_tcol_e0.pdf')
 	plt.close()
+	
+	exit()
 	
 	ltgw = np.array([coaltime(100, 100, 1e6, 1e3*Msun/PC**3, e, a0 = 0.04*KPC) for e in le])
 	plt.figure()

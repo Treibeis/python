@@ -14,7 +14,7 @@ PLANCK = HBAR*2*np.pi
 CHARGE = 4.80320451e-10
 SPEEDOFLIGHT = 2.99792458e+10
 eV = 1.60218e-12
-YR = 3600*24*365
+YR = 3600*24*365.25
 PC = 3.085678e18
 KPC = PC*1e3
 MPC = PC*1e6
@@ -63,26 +63,32 @@ def sumy(l):
 def BB_spectrum(nu0, T):
   numax = 50.*BOL*T/PLANCK
   nu = nu0 * (nu0<numax) + numax * (nu0>=numax)
-  return 2*PLANCK/SPEEDOFLIGHT**2 * nu**3/(np.exp(PLANCK*nu/(BOL*T))-1) * (nu<=numax)
+  return 2*PLANCK/SPEEDOFLIGHT**2 * nu**3/(np.exp(PLANCK*nu/(BOL*T))-1) * (nu0<=numax)
 
 # Cosmology
-def H(a, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
+def H(a, Om = 0.3089, h = 0.6774, OR = 9.12e-5):
 	H0 = h*100*UV/UL/1e3
 	H = H0*(Om/a**3+(1-Om-OR)+OR/a**4)**0.5
 	return H
 
 # co-moving distance
-def DZ(z, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
+def DZ(z, Om = 0.3089, h = 0.6774, OR = 9.12e-5):
 	def integrand(a):
 		return SPEEDOFLIGHT/(a**2)/H(a, Om, h, OR)
 	I = quad(integrand, 1/(1+z), 1, epsrel = 1e-8)
 	return I[0]
 
-def dt_da(a, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
+def horizon(z, Om = 0.3089, h = 0.6774, OR = 9.12e-5, a0=1e-10):
+	def integrand(loga):
+		return SPEEDOFLIGHT/np.exp(loga)/H(np.exp(loga),Om,h,OR)
+	I = quad(integrand, np.log(a0), np.log(1/(1+z)), epsrel=1e-8)
+	return I[0]
+
+def dt_da(a, Om = 0.3089, h = 0.6774, OR = 9.12e-5):
 	return 1/a/H(a, Om, h, OR)
 
 # cosmic age
-def TZ0(z, Om = 0.3089, h = 0.6774, OR = 9.54e-5):
+def TZ0(z, Om = 0.3089, h = 0.6774, OR = 9.12e-5):
 	I = quad(dt_da, 0, 1/(1+z), args = (Om, h, OR), epsrel = 1e-8)
 	return I[0]
 

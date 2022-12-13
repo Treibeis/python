@@ -32,21 +32,27 @@ def initial(Tini = 2.0e5, nini = 1.0e2, Xh2=1e-16, Ion=1.0, X = 0.76, D = [1.0, 
 		y[i] = max(y[i], 0.0)
 	return y
 
-def get_shield(NH2, T):
+def get_shield(NH2, T, xnh):
 	b5 = 9.12*(T/1e4)**0.5
-	a = 1.1
+	#a = 1.1
+	A1 = 0.8711*np.log10(T)-1.928;
+	A2 = -0.9639*np.log10(T)+3.892;
+	a = A1*np.exp(-0.2856*np.log10(xnh)) + A2;
 	x = NH2/5e14
 	f = 0.965/(1+x/b5)**a + 0.035/(1+x)**0.5 * np.exp(-8.5e-4*(1+x)**0.5)
 	return f
 
-def HDshield(NH2):
+def HDshield(NH2, NHI):
 	x = NH2/2.34e19
-	return 1./(1+x)**0.238 * np.exp(-5.2e-3*x)
+	y1 = 1./(1+x)**0.238 * np.exp(-5.2e-3*x)
+	x = NHI/2.85e23
+	y2 = 1./(1+x)**1.62 * np.exp(-0.149*x)
+	return y1*y2
 
 def fshield(T, nh, xh2):
 	LJ = 4.8e19*(T/nh)**0.5
 	NH2 = nh*xh2*LJ
-	return get_shield(NH2, T)
+	return get_shield(NH2, T, nh)
 
 def J21_bal(T, nh, xh2, xe, J21, Ns = 17, D = 4e-5):
 	#xs = fshield(T, nh, xh2)
@@ -177,13 +183,13 @@ def rates(J_21, T, n):
 	#	xshield = 1.0
 	#else:
 	#	xshield = NH2**-0.75
-	xshield = get_shield(NH2, T)
+	xshield = get_shield(NH2, T, nh)
 	k[21] = 0#5.16e-12*J_21 # H + hnu = H+ + e-
 	k[22] = 0#7.9e-12*J_21  # He -> He+
 	k[23] = 0#1.9e-13*J_21	# He+ -> He++
-	k[24] = 1.1e-10*J_21 * 1.71 # H- +hnu = H + e- ?
-	k[25] = 4.8e-12*J_21 # H2+ + hnu = H + H+
-	k[26] = 1.2e-11*J_21*xshield # H2 + hnu = H2+ + e-
+	k[24] = 1.1e-10*J_21 * 1.71 * xshield # H- +hnu = H + e- ?
+	k[25] = 4.8e-12*J_21 * xshield # H2+ + hnu = H + H+
+	k[26] = 1.2e-11*J_21 * xshield # H2 + hnu = H2+ + e-
 	k[27] = 1.38e-12 * 0.97 * J_21 * xshield
 	
 	# Three-body reations from Palla et al.,1983,ApJ 271,632
@@ -359,6 +365,8 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, H2_f
 	nh = ny[0]+ny[1]+ny[2]+2.0*(ny[3]+ny[4])
 	LJ = 4.8e19*(T/nh)**0.5
 	NH2 = ny[3]*LJ
+	NHD = ny[11]*LJ
+	NHI = ny[0]*LJ
 	while dt_cum<dt0:
 		k = rates(J_21, T, ny)
 		Cr[5]=k[21]*ny[0]+k[22]*ny[6]+k[23]*ny[7]+(k[0]*ny[0]+k[1]*ny[6]+k[2]*ny[7])*ny[5]
@@ -454,7 +462,7 @@ def chemistry1(T, nin, dt0, epsH, J_21, Ns, xnh, xnhe, xnd, xnli, Cr0, Ds0, H2_f
 			if ny[i]<1e-30:
 				ny[i] = 0.0
 
-		kdeHD = k[27]*HDshield(NH2)
+		kdeHD = 1.38e-12 * 0.97 * J_21 * get_shield(NHD, T, nh) * HDshield(NH2, NHI)
 
 		Cr[10]=k[30]*ny[9]*ny[1]+k[33]*ny[11]*ny[1]
 		Ds[10]=k[3]*ny[5]+k[31]*ny[0]+k[32]*ny[3]

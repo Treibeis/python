@@ -40,7 +40,7 @@ tsgZ6 = np.array([+3.0667170921629699e-01, -2.2573597515177801e+00, +1.326268760
 remsZ6 = np.array([-4.3397491671777300e-01, +1.3377594599674700e+00, -5.1421774804168696e-01, +1.5412807397524700e-01])
 rchebZ6 = np.array([-3.6832391211242701e+00, +1.1084061918623000e+01, -9.7324743496085198e+00, +3.1373519906345702e+00])
 
-temsZ5 = np.array([-4.1085136748565099e-01, +4.4292411042459900e-01, +6.2270607618818596e-01, -1.5313454615055200e-01])
+temsZ5 = np.array([+1.5608149013984800e+00, +7.3567160614509504e+01, +8.1835557597302898e+02, +2.1085273006198800e+03])
 tsgZ5 = np.array([+2.5190328005023799e-01, +2.3937574545125400e+00, +6.8538719197550407e+01, +3.4090149355802299e+02])
 remsZ5 = np.array([-9.2456828602432894e-01, +2.5389191763683798e+00, -1.3751410532902100e+00, +3.5045831707709002e-01])
 rchebZ5 = np.array([-7.8927435380812403e+00, +2.2851238614423899e+01, -2.0357967863018199e+01, +6.3389279382339296e+00])
@@ -140,7 +140,7 @@ def Mrem(M, mco=mcoZ6, mhe=mheZ6, Md=8, Mu=160):
 	Mr += 45 * (MHe>45) * (MHe<=65)
 	return Mr
 
-"""	
+#"""	
 lM = np.geomspace(1, 500, 100)
 lR8 = [Rzams(m, rzamsZ8) for m in lM]
 lR6 = [Rzams(m, rzamsZ6) for m in lM]
@@ -198,7 +198,7 @@ plt.legend()
 plt.savefig('REHeB_M.pdf')
 plt.close()
 
-#lM = np.geomspace(1, 500, 100)
+lM = np.geomspace(1, 500, 100)
 lR8 = [Rzams(m, mcoZ8) for m in lM]
 lR6 = [Rzams(m, mcoZ6) for m in lM]
 lR5 = [Rzams(m, mcoZ5) for m in lM]
@@ -235,6 +235,9 @@ plt.legend()
 plt.savefig('McHe_M.pdf')
 plt.close()
 
+m1, m2, nm = 5, 200, 500
+lM = np.geomspace(m1, m2, nm)
+
 lR8 = [tphase(m, temsZ8, log=0, sign=-1) for m in lM]
 lR6 = [tphase(m, temsZ6, log=0, sign=-1) for m in lM]
 lR5 = [tphase(m, temsZ5, log=0, sign=-1) for m in lM]
@@ -248,6 +251,7 @@ plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
 plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$t_{\rm EMS}\ [\rm Myr]$')
+plt.xlim(m1, m2)
 plt.tight_layout()
 plt.legend()
 plt.savefig('tEMS_M.pdf')
@@ -266,6 +270,7 @@ plt.loglog(lM, lR4, ':', label=r'$\log(Z/\rm Z_{\odot})=-4$')
 plt.loglog(lM, lR2, ls=(0, (10, 5)), color='k', label=r'$\log(Z/\rm Z_{\odot})=-2$')
 plt.xlabel(r'$m_{\star}\ [\rm M_{\odot}]$')
 plt.ylabel(r'$t_{\rm SG}\ [\rm Myr]$')
+plt.xlim(m1, m2)
 plt.tight_layout()
 plt.legend()
 plt.savefig('tSG_M.pdf')
@@ -296,7 +301,9 @@ plt.tight_layout()
 plt.legend()
 plt.savefig('Mrem_M.pdf')
 plt.close()
-"""
+
+exit()
+#"""
 
 def Alope(R1, q1, e=0):
 	y = (0.6*q1**(2./3) + np.log(1+q1**(1./3))) / (0.49*q1**(2./3))
