@@ -18,12 +18,12 @@ lr = s2r(ls)
 
 lx, ly = P2C(lr, ls)
 
-c = 'r'
+c = '#009E73'
 plt.figure()
 ax = plt.subplot(111)
 ax.set_aspect(aspect=1)
 plt.plot(lx, ly, color=c)
-plt.title(r'Golden spirial')#: $N_{c}='+str(ncircle)+'$')
+plt.title(r'Golden spiral')#: $N_{c}='+str(ncircle)+'$')
 plt.tight_layout()
 plt.savefig('nautilus.pdf')
 plt.show()
