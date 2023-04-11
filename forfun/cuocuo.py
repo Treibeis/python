@@ -38,6 +38,6 @@ if __name__=="__main__":
 			labelleft=False, labelbottom=False)
 	#plt.title('I love U')
 	plt.tight_layout()
-	plt.savefig('IloveU.pdf')
+	plt.savefig('IloveU.png', dpi=233)
 	plt.show()
 	plt.close()

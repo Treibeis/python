@@ -26,6 +26,12 @@ AU = 1.495978707e13
 Lsun = 3.828e33
 Rsun = 6.96342e10
 
+Mearth = 5.972168e27
+Rearth = 6371e5
+
+Mjupiter = 1.8982e30
+Rjupiter = 69911e5
+
 H00 = 1e7/MPC
 
 # Primordial abundances
