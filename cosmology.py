@@ -59,6 +59,19 @@ UE = UM*UL**2/UT**2
 
 G = GRA*UM*UT**2/UL**3
 
+def tolog10(x, nd=0):
+	logx = int(np.log10(x))
+	if logx<0 and logx>np.log10(x):
+		logx = logx-1
+	if nd==0:
+		num = int(x/10**logx)
+	else:
+		num =  int(x/10**(logx-nd))/10**nd
+	if num==1:
+		return r'10^{'+str(logx)+'}'
+	else:
+		return '{}'.format(num)+r'\times 10^{'+str(logx)+'}'
+
 def midbin(l):
 	return (l[1:]+l[:-1])*0.5
 
